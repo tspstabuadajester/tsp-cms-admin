@@ -17,7 +17,7 @@ import UserMenuContent from '@/components/UserMenuContent.vue';
 import { getInitials } from '@/composables/useInitials';
 import type { BreadcrumbItem, NavItem } from '@/types';
 import { Link, usePage } from '@inertiajs/vue3';
-import { BookOpen, Folder, Globe, LayoutGrid, Menu, Search } from 'lucide-vue-next';
+import { BookOpen, Folder, Globe, LayoutGrid, Menu, Search, User } from 'lucide-vue-next';
 import { computed } from 'vue';
 
 interface Props {
@@ -47,6 +47,11 @@ const mainNavItems: NavItem[] = [
         title: 'Websites',
         href: '/websites',
         icon: Globe,
+    },
+    {
+        title: 'User',
+        href: '/user',
+        icon: User,
     },
 ];
 
