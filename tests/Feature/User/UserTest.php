@@ -2,22 +2,45 @@
 
 namespace Tests\Feature\User;
 
+use App\Models\Business;
 use App\Models\User;
+use App\Support\AssignableUserRoles;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Storage;
 use Spatie\Permission\Models\Permission;
+use Spatie\Permission\Models\Role;
 use Tests\TestCase;
 
 class UserTest extends TestCase
 {
     use RefreshDatabase;
 
+    protected function setUp(): void
+    {
+        parent::setUp();
+
+        $this->seedAssignableRoles();
+    }
+
     private function validPassword(): string
     {
         return 'Password1!';
     }
 
+    private function seedAssignableRoles(): void
+    {
+        foreach (AssignableUserRoles::NAMES as $roleName) {
+            Role::firstOrCreate([
+                'name' => $roleName,
+                'guard_name' => 'web',
+            ]);
+        }
+    }
+
+    /**
+     * Super-admin treatment: no business_id (null).
+     */
     private function createSettingsManager(array $attributes = []): User
     {
         Permission::firstOrCreate([
@@ -25,10 +48,25 @@ class UserTest extends TestCase
             'guard_name' => 'web',
         ]);
 
-        $user = User::factory()->create($attributes);
+        $user = User::factory()->create(array_merge([
+            'business_id' => null,
+        ], $attributes));
+
         $user->givePermissionTo('settings.manage');
 
         return $user;
+    }
+
+    /**
+     * Business-scoped settings manager.
+     */
+    private function createScopedSettingsManager(?Business $business = null): User
+    {
+        $business ??= Business::factory()->create();
+
+        return $this->createSettingsManager([
+            'business_id' => $business->id,
+        ]);
     }
 
     /**
@@ -42,6 +80,7 @@ class UserTest extends TestCase
             'email' => 'jane@example.com',
             'password' => $this->validPassword(),
             'password_confirmation' => $this->validPassword(),
+            'role' => 'content-manager',
         ], $overrides);
     }
 
@@ -55,9 +94,17 @@ class UserTest extends TestCase
             'name' => $user->name,
             'email' => $user->email,
             'status' => $user->status ?? 'active',
+            'role' => $user->getRoleNames()->first() ?? 'content-manager',
             'password' => '',
             'password_confirmation' => '',
         ], $overrides);
+    }
+
+    private function assignRole(User $user, string $role = 'content-manager'): void
+    {
+        if ($user->roles()->count() === 0) {
+            $user->assignRole($role);
+        }
     }
 
     public function test_guests_are_redirected_from_user_routes(): void
@@ -76,11 +123,13 @@ class UserTest extends TestCase
         $user = User::factory()->create();
         $targetUser = User::factory()->create();
 
-        $this->actingAs($user)->get(route('user'))->assertForbidden();
-        $this->actingAs($user)->get(route('user.create'))->assertForbidden();
-        $this->actingAs($user)->post(route('user.store'), $this->validStorePayload())->assertForbidden();
-        $this->actingAs($user)->get(route('user.edit', $targetUser))->assertForbidden();
-        $this->actingAs($user)->put(route('user.update', $targetUser), $this->validUpdatePayload($targetUser))->assertForbidden();
+        $this->actingAs($user);
+
+        $this->get(route('user'))->assertForbidden();
+        $this->get(route('user.create'))->assertForbidden();
+        $this->post(route('user.store'), $this->validStorePayload())->assertForbidden();
+        $this->get(route('user.edit', $targetUser))->assertForbidden();
+        $this->put(route('user.update', $targetUser), $this->validUpdatePayload($targetUser))->assertForbidden();
     }
 
     public function test_authenticated_users_can_view_user_index(): void
@@ -90,6 +139,96 @@ class UserTest extends TestCase
         $response = $this->actingAs($admin)->get(route('user'));
 
         $response->assertOk();
+    }
+
+    public function test_super_admin_sees_all_users_on_index(): void
+    {
+        $business = Business::factory()->create();
+
+        User::factory()->count(2)->create(['business_id' => $business->id]);
+        $unscopedUser = User::factory()->create(['business_id' => null]);
+
+        $admin = $this->createSettingsManager();
+
+        $this->actingAs($admin)
+            ->get(route('user'))
+            ->assertOk()
+            ->assertViewHas('page', function (array $page) use ($unscopedUser): bool {
+                $userIds = collect($page['props']['users'])->pluck('id')->all();
+
+                return $page['component'] === 'User/Index'
+                    && count($userIds) === 4
+                    && in_array($unscopedUser->id, $userIds, true);
+            });
+    }
+
+    public function test_business_scoped_user_only_sees_users_in_their_business_on_index(): void
+    {
+        $business = Business::factory()->create();
+        $otherBusiness = Business::factory()->create();
+
+        $inBusiness = User::factory()->create(['business_id' => $business->id]);
+        $outsideUser = User::factory()->create(['business_id' => $otherBusiness->id]);
+        $unscopedUser = User::factory()->create(['business_id' => null]);
+
+        $scopedManager = $this->createScopedSettingsManager($business);
+
+        $this->actingAs($scopedManager)
+            ->get(route('user'))
+            ->assertOk()
+            ->assertViewHas('page', function (array $page) use ($inBusiness, $outsideUser, $unscopedUser, $scopedManager): bool {
+                $userIds = collect($page['props']['users'])->pluck('id')->all();
+
+                return $page['component'] === 'User/Index'
+                    && count($userIds) === 2
+                    && in_array($inBusiness->id, $userIds, true)
+                    && in_array($scopedManager->id, $userIds, true)
+                    && ! in_array($outsideUser->id, $userIds, true)
+                    && ! in_array($unscopedUser->id, $userIds, true);
+            });
+    }
+
+    public function test_business_scoped_user_cannot_edit_user_outside_their_business(): void
+    {
+        $business = Business::factory()->create();
+        $scopedManager = $this->createScopedSettingsManager($business);
+        $outsideUser = User::factory()->create([
+            'business_id' => Business::factory()->create()->id,
+        ]);
+        $this->assignRole($outsideUser);
+
+        $this->actingAs($scopedManager)
+            ->get(route('user.edit', $outsideUser))
+            ->assertNotFound();
+
+        $this->actingAs($scopedManager)
+            ->put(route('user.update', $outsideUser), $this->validUpdatePayload($outsideUser, [
+                'name' => 'Hacked Name',
+            ]))
+            ->assertNotFound();
+    }
+
+    public function test_business_scoped_user_creates_users_in_their_business(): void
+    {
+        Storage::fake('public');
+
+        $business = Business::factory()->create();
+        $scopedManager = $this->createScopedSettingsManager($business);
+
+        $this->actingAs($scopedManager)
+            ->post(route('user.store'), $this->validStorePayload([
+                'name' => 'Scoped User',
+                'email' => 'scoped-user@example.com',
+                'business_id' => Business::factory()->create()->id,
+            ]))
+            ->assertSessionHasNoErrors()
+            ->assertRedirect(route('user'));
+
+        $createdUser = User::query()->where('email', 'scoped-user@example.com')->first();
+
+        $this->assertNotNull($createdUser);
+        $this->assertSame($business->id, $createdUser->business_id);
+        $this->assertTrue($createdUser->hasRole('content-manager'));
     }
 
     public function test_authenticated_users_can_view_create_user_page(): void
@@ -125,6 +264,7 @@ class UserTest extends TestCase
         $this->assertNotNull($createdUser);
         $this->assertSame('New User', $createdUser->name);
         $this->assertNotNull($createdUser->avatar);
+        $this->assertTrue($createdUser->hasRole('content-manager'));
         Storage::disk('public')->assertExists('avatars/'.$createdUser->avatar);
     }
 
@@ -136,7 +276,7 @@ class UserTest extends TestCase
         $this->actingAs($admin)
             ->from(route('user.create'))
             ->post(route('user.store'), [])
-            ->assertSessionHasErrors(['name', 'email', 'password']);
+            ->assertSessionHasErrors(['name', 'email', 'password', 'role']);
 
         $this->actingAs($admin)
             ->from(route('user.create'))
@@ -144,12 +284,20 @@ class UserTest extends TestCase
                 'email' => 'existing@example.com',
             ]))
             ->assertSessionHasErrors(['email']);
+
+        $this->actingAs($admin)
+            ->from(route('user.create'))
+            ->post(route('user.store'), $this->validStorePayload([
+                'role' => 'super-admin',
+            ]))
+            ->assertSessionHasErrors(['role']);
     }
 
     public function test_authenticated_users_can_view_edit_user_page(): void
     {
         $admin = $this->createSettingsManager();
         $user = User::factory()->create();
+        $this->assignRole($user);
 
         $response = $this->actingAs($admin)->get(route('user.edit', $user));
 
@@ -166,11 +314,13 @@ class UserTest extends TestCase
             'email' => 'original@example.com',
             'status' => 'active',
         ]);
+        $this->assignRole($user);
 
         $response = $this->actingAs($admin)->put(route('user.update', $user), $this->validUpdatePayload($user, [
             'name' => 'Updated Name',
             'email' => 'updated@example.com',
             'status' => 'inactive',
+            'role' => 'business-admin',
         ]));
 
         $response
@@ -186,6 +336,7 @@ class UserTest extends TestCase
         $this->assertSame('Updated Name', $user->name);
         $this->assertSame('updated@example.com', $user->email);
         $this->assertSame('inactive', $user->status);
+        $this->assertTrue($user->hasRole('business-admin'));
         $this->assertNull($user->email_verified_at);
     }
 
@@ -196,6 +347,7 @@ class UserTest extends TestCase
             'email' => 'verified@example.com',
             'status' => 'active',
         ]);
+        $this->assignRole($user);
 
         $verifiedAt = $user->email_verified_at;
 
@@ -216,6 +368,7 @@ class UserTest extends TestCase
     {
         $admin = $this->createSettingsManager();
         $user = User::factory()->create();
+        $this->assignRole($user);
 
         $this->actingAs($admin)
             ->put(route('user.update', $user), $this->validUpdatePayload($user, [
@@ -237,6 +390,7 @@ class UserTest extends TestCase
             'name' => 'Original Name',
             'avatar' => 'existing-avatar.svg',
         ]);
+        $this->assignRole($user);
 
         Storage::disk('public')->put('avatars/existing-avatar.svg', '<svg>original</svg>');
 
@@ -258,12 +412,13 @@ class UserTest extends TestCase
     {
         $admin = $this->createSettingsManager();
         $user = User::factory()->create(['email' => 'user@example.com']);
+        $this->assignRole($user);
         User::factory()->create(['email' => 'taken@example.com']);
 
         $this->actingAs($admin)
             ->from(route('user.edit', $user))
             ->put(route('user.update', $user), [])
-            ->assertSessionHasErrors(['name', 'email', 'status']);
+            ->assertSessionHasErrors(['name', 'email', 'status', 'role']);
 
         $this->actingAs($admin)
             ->from(route('user.edit', $user))
@@ -278,5 +433,12 @@ class UserTest extends TestCase
                 'status' => 'invalid-status',
             ]))
             ->assertSessionHasErrors(['status']);
+
+        $this->actingAs($admin)
+            ->from(route('user.edit', $user))
+            ->put(route('user.update', $user), $this->validUpdatePayload($user, [
+                'role' => 'super-admin',
+            ]))
+            ->assertSessionHasErrors(['role']);
     }
 }
