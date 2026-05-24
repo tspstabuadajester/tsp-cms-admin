@@ -5,13 +5,14 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import AppLayout from '@/layouts/AppLayout.vue';
+import SettingsLayout from '@/layouts/settings/Layout.vue';
 import { type BreadcrumbItem } from '@/types';
 import { Head, Link, useForm } from '@inertiajs/vue3';
 import { LoaderCircle } from 'lucide-vue-next';
 
 const breadcrumbs: BreadcrumbItem[] = [
     {
-        title: 'User',
+        title: 'Users',
         href: '/user',
     },
     {
@@ -38,7 +39,8 @@ const submit = () => {
     <Head title="Create User" />
 
     <AppLayout :breadcrumbs="breadcrumbs">
-        <div class="mx-auto flex h-full w-full max-w-xl flex-1 flex-col gap-6 rounded-xl p-4">
+        <SettingsLayout>
+            <div class="flex flex-col gap-6">
             <HeadingSmall title="Create user" description="Add a new user to the system" />
 
             <form @submit.prevent="submit" class="space-y-6">
@@ -108,6 +110,7 @@ const submit = () => {
                     </Button>
                 </div>
             </form>
-        </div>
+            </div>
+        </SettingsLayout>
     </AppLayout>
 </template>

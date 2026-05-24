@@ -7,6 +7,7 @@ import { useAvatarUrl } from '@/composables/useAvatarUrl';
 import { useInitials } from '@/composables/useInitials';
 import { formatUserStatus, userStatusVariant } from '@/composables/useUserStatus';
 import AppLayout from '@/layouts/AppLayout.vue';
+import SettingsLayout from '@/layouts/settings/Layout.vue';
 import { type BreadcrumbItem, type User } from '@/types';
 import { Head, Link } from '@inertiajs/vue3';
 import { Pencil, Plus } from 'lucide-vue-next';
@@ -20,7 +21,7 @@ const { avatarUrl } = useAvatarUrl();
 
 const breadcrumbs: BreadcrumbItem[] = [
     {
-        title: 'User',
+        title: 'Users',
         href: '/user',
     },
 ];
@@ -35,86 +36,75 @@ const formatDate = (date: string) => {
 </script>
 
 <template>
-    <Head title="User" />
+    <Head title="Users" />
 
     <AppLayout :breadcrumbs="breadcrumbs">
-        <div class="flex h-full flex-1 flex-col gap-4 rounded-xl p-4">
-            <div class="flex items-center justify-between gap-4">
-                <HeadingSmall title="Users" description="Manage all users in the system" />
-                <Button as-child>
-                    <Link :href="route('user.create')">
-                        <Plus class="size-4" />
-                        Create User
-                    </Link>
-                </Button>
-            </div>
+        <SettingsLayout full-width>
+            <div class="flex flex-col gap-4">
+                <div class="flex items-center justify-between gap-4">
+                    <HeadingSmall title="Users" description="Manage all users in the system" />
+                    <Button as-child>
+                        <Link :href="route('user.create')">
+                            <Plus class="size-4" />
+                            Create User
+                        </Link>
+                    </Button>
+                </div>
 
-            <div class="overflow-hidden rounded-lg border">
-                <table class="w-full caption-bottom text-sm">
-                    <thead class="border-b bg-muted/50">
-                        <tr>
-                            <th class="h-10 w-14 px-4 text-left align-middle font-medium text-muted-foreground">Avatar</th>
-                            <th class="h-10 px-4 text-left align-middle font-medium text-muted-foreground">Name</th>
-                            <th class="h-10 px-4 text-left align-middle font-medium text-muted-foreground">Email</th>
-                            <th class="h-10 px-4 text-left align-middle font-medium text-muted-foreground">Status</th>
-                            <th class="h-10 px-4 text-left align-middle font-medium text-muted-foreground">Verified</th>
-                            <th class="h-10 px-4 text-left align-middle font-medium text-muted-foreground">Created</th>
-                            <th class="h-10 w-24 px-4 text-right align-middle font-medium text-muted-foreground">Actions</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        <tr v-if="users.length === 0">
-                            <td colspan="7" class="p-4 text-center text-muted-foreground">No users found.</td>
-                        </tr>
-                        <tr
-                            v-for="user in users"
-                            :key="user.id"
-                            class="border-b transition-colors last:border-0 hover:bg-muted/50"
-                        >
-                            <td class="p-4 align-middle">
-                                <Avatar class="size-8 overflow-hidden rounded-full">
-                                    <AvatarImage
-                                        v-if="avatarUrl(user.avatar)"
-                                        :src="avatarUrl(user.avatar)!"
-                                        :alt="user.name"
-                                    />
-                                    <AvatarFallback class="rounded-full text-xs">
-                                        {{ getInitials(user.name) }}
-                                    </AvatarFallback>
-                                </Avatar>
-                            </td>
-                            <td class="p-4 align-middle font-medium">{{ user.name }}</td>
-                            <td class="p-4 align-middle">{{ user.email }}</td>
-                            <td class="p-4 align-middle">
-                                <StatusBadge :variant="userStatusVariant(user.status)">
-                                    {{ formatUserStatus(user.status) }}
-                                </StatusBadge>
-                            </td>
-                            <td class="p-4 align-middle">
-                                <span
-                                    :class="[
-                                        'inline-flex rounded-full px-2 py-0.5 text-xs font-medium',
-                                        user.email_verified_at
-                                            ? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400'
-                                            : 'bg-neutral-100 text-neutral-600 dark:bg-neutral-800 dark:text-neutral-400',
-                                    ]"
-                                >
-                                    {{ user.email_verified_at ? 'Verified' : 'Unverified' }}
-                                </span>
-                            </td>
-                            <td class="p-4 align-middle text-muted-foreground">{{ formatDate(user.created_at) }}</td>
-                            <td class="p-4 align-middle text-right">
-                                <Button variant="outline" size="sm" as-child>
-                                    <Link :href="route('user.edit', user.id)">
-                                        <Pencil class="size-4" />
-                                        Edit
-                                    </Link>
-                                </Button>
-                            </td>
-                        </tr>
-                    </tbody>
-                </table>
+                <div class="overflow-hidden rounded-lg border">
+                    <table class="w-full caption-bottom text-sm">
+                        <thead class="border-b bg-muted/50">
+                            <tr>
+                                <th class="h-10 w-14 px-4 text-left align-middle font-medium text-muted-foreground">Avatar</th>
+                                <th class="h-10 px-4 text-left align-middle font-medium text-muted-foreground">Name</th>
+                                <th class="h-10 px-4 text-left align-middle font-medium text-muted-foreground">Email</th>
+                                <th class="h-10 px-4 text-left align-middle font-medium text-muted-foreground">Status</th>
+                                <th class="h-10 px-4 text-left align-middle font-medium text-muted-foreground">Created</th>
+                                <th class="h-10 w-24 px-4 text-right align-middle font-medium text-muted-foreground">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr v-if="users.length === 0">
+                                <td colspan="6" class="p-4 text-center text-muted-foreground">No users found.</td>
+                            </tr>
+                            <tr
+                                v-for="user in users"
+                                :key="user.id"
+                                class="border-b transition-colors last:border-0 hover:bg-muted/50"
+                            >
+                                <td class="p-4 align-middle">
+                                    <Avatar class="size-8 overflow-hidden rounded-full">
+                                        <AvatarImage
+                                            v-if="avatarUrl(user.avatar)"
+                                            :src="avatarUrl(user.avatar)!"
+                                            :alt="user.name"
+                                        />
+                                        <AvatarFallback class="rounded-full text-xs">
+                                            {{ getInitials(user.name) }}
+                                        </AvatarFallback>
+                                    </Avatar>
+                                </td>
+                                <td class="p-4 align-middle font-medium">{{ user.name }}</td>
+                                <td class="p-4 align-middle">{{ user.email }}</td>
+                                <td class="p-4 align-middle">
+                                    <StatusBadge :variant="userStatusVariant(user.status)">
+                                        {{ formatUserStatus(user.status) }}
+                                    </StatusBadge>
+                                </td>
+                                <td class="p-4 align-middle text-muted-foreground">{{ formatDate(user.created_at) }}</td>
+                                <td class="p-4 align-middle text-right">
+                                    <Button variant="outline" size="sm" as-child>
+                                        <Link :href="route('user.edit', user.id)">
+                                            <Pencil class="size-4" />
+                                            Edit
+                                        </Link>
+                                    </Button>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
             </div>
-        </div>
+        </SettingsLayout>
     </AppLayout>
 </template>

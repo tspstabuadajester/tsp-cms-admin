@@ -8,6 +8,7 @@ import { Label } from '@/components/ui/label';
 import { useAvatarUrl } from '@/composables/useAvatarUrl';
 import { useInitials } from '@/composables/useInitials';
 import AppLayout from '@/layouts/AppLayout.vue';
+import SettingsLayout from '@/layouts/settings/Layout.vue';
 import { type BreadcrumbItem, type User } from '@/types';
 import { Head, Link, useForm } from '@inertiajs/vue3';
 import { LoaderCircle } from 'lucide-vue-next';
@@ -18,7 +19,7 @@ const props = defineProps<{
 
 const breadcrumbs: BreadcrumbItem[] = [
     {
-        title: 'User',
+        title: 'Users',
         href: '/user',
     },
     {
@@ -49,7 +50,8 @@ const submit = () => {
     <Head title="Edit User" />
 
     <AppLayout :breadcrumbs="breadcrumbs">
-        <div class="mx-auto flex h-full w-full max-w-xl flex-1 flex-col gap-6 rounded-xl p-4">
+        <SettingsLayout>
+            <div class="flex flex-col gap-6">
             <HeadingSmall title="Edit user" description="Update user details" />
 
             <div class="flex items-center gap-4">
@@ -144,6 +146,7 @@ const submit = () => {
                     </Button>
                 </div>
             </form>
-        </div>
+            </div>
+        </SettingsLayout>
     </AppLayout>
 </template>

@@ -17,11 +17,6 @@ const mainNavItems: NavItem[] = [
         href: '/websites',
         iconSrc: '/svgs/globe2.svg',
     },
-    {
-        title: 'User',
-        href: '/user',
-        iconSrc: '/svgs/users.svg',
-    },
 ];
 
 </script>

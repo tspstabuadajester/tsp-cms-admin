@@ -3,7 +3,15 @@ import Heading from '@/components/Heading.vue';
 import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
 import { type NavItem } from '@/types';
-import { Link } from '@inertiajs/vue3';
+import { Link, usePage } from '@inertiajs/vue3';
+
+interface Props {
+    fullWidth?: boolean;
+}
+
+withDefaults(defineProps<Props>(), {
+    fullWidth: false,
+});
 
 const sidebarNavItems: NavItem[] = [
     {
@@ -15,12 +23,24 @@ const sidebarNavItems: NavItem[] = [
         href: '/settings/password',
     },
     {
+        title: 'User',
+        href: '/user',
+    },
+    {
         title: 'Appearance',
         href: '/settings/appearance',
     },
 ];
 
-const currentPath = window.location.pathname;
+const page = usePage();
+
+const isNavItemActive = (href: string): boolean => {
+    if (page.url === href) {
+        return true;
+    }
+
+    return page.url.startsWith(`${href}/`);
+};
 </script>
 
 <template>
@@ -34,7 +54,7 @@ const currentPath = window.location.pathname;
                         v-for="item in sidebarNavItems"
                         :key="item.href"
                         variant="ghost"
-                        :class="['w-full justify-start', { 'bg-muted': currentPath === item.href }]"
+                        :class="['w-full justify-start', { 'bg-muted': isNavItemActive(item.href) }]"
                         as-child
                     >
                         <Link :href="item.href">
@@ -46,8 +66,8 @@ const currentPath = window.location.pathname;
 
             <Separator class="my-6 md:hidden" />
 
-            <div class="flex-1 md:max-w-2xl">
-                <section class="max-w-xl space-y-12">
+            <div class="flex-1" :class="fullWidth ? 'max-w-none' : 'md:max-w-2xl'">
+                <section class="space-y-12" :class="fullWidth ? 'max-w-none' : 'max-w-xl'">
                     <slot />
                 </section>
             </div>
