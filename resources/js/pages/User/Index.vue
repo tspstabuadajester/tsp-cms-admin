@@ -7,7 +7,7 @@ import { useInitials } from '@/composables/useInitials';
 import AppLayout from '@/layouts/AppLayout.vue';
 import { type BreadcrumbItem, type User } from '@/types';
 import { Head, Link } from '@inertiajs/vue3';
-import { Plus } from 'lucide-vue-next';
+import { Pencil, Plus } from 'lucide-vue-next';
 
 defineProps<{
     users: User[];
@@ -56,11 +56,12 @@ const formatDate = (date: string) => {
                             <th class="h-10 px-4 text-left align-middle font-medium text-muted-foreground">Email</th>
                             <th class="h-10 px-4 text-left align-middle font-medium text-muted-foreground">Verified</th>
                             <th class="h-10 px-4 text-left align-middle font-medium text-muted-foreground">Created</th>
+                            <th class="h-10 w-24 px-4 text-right align-middle font-medium text-muted-foreground">Actions</th>
                         </tr>
                     </thead>
                     <tbody>
                         <tr v-if="users.length === 0">
-                            <td colspan="5" class="p-4 text-center text-muted-foreground">No users found.</td>
+                            <td colspan="6" class="p-4 text-center text-muted-foreground">No users found.</td>
                         </tr>
                         <tr
                             v-for="user in users"
@@ -94,6 +95,14 @@ const formatDate = (date: string) => {
                                 </span>
                             </td>
                             <td class="p-4 align-middle text-muted-foreground">{{ formatDate(user.created_at) }}</td>
+                            <td class="p-4 align-middle text-right">
+                                <Button variant="outline" size="sm" as-child>
+                                    <Link :href="route('user.edit', user.id)">
+                                        <Pencil class="size-4" />
+                                        Edit
+                                    </Link>
+                                </Button>
+                            </td>
                         </tr>
                     </tbody>
                 </table>

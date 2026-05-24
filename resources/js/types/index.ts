@@ -35,6 +35,7 @@ export interface User {
     name: string;
     email: string;
     avatar?: string; // filename only, e.g. "uuid.svg"
+    status?: 'active' | 'inactive';
     email_verified_at: string | null;
     created_at: string;
     updated_at: string;

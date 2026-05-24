@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Http\Requests\User\StoreUserRequest;
+use App\Http\Requests\User\UpdateUserRequest;
 use App\Models\User;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Support\Facades\Storage;
@@ -51,11 +52,52 @@ class UserController extends Controller
     }
 
     /**
+     * Show the form for editing the specified user.
+     */
+    public function edit(User $user): Response
+    {
+        return Inertia::render('User/Edit', [
+            'user' => $user->only(['id', 'name', 'email', 'avatar', 'status']),
+        ]);
+    }
+
+    /**
+     * Update the specified user.
+     */
+    public function update(UpdateUserRequest $request, User $user): RedirectResponse
+    {
+        $validated = $request->validated();
+        $nameChanged = $validated['name'] !== $user->name;
+
+        $user->fill([
+            'name' => $validated['name'],
+            'email' => $validated['email'],
+            'status' => $validated['status'],
+        ]);
+
+        if ($user->isDirty('email')) {
+            $user->email_verified_at = null;
+        }
+
+        if (! empty($validated['password'])) {
+            $user->password = $validated['password'];
+        }
+
+        if ($nameChanged) {
+            $user->avatar = $this->generateAvatar($validated['name'], $user->avatar);
+        }
+
+        $user->save();
+
+        return to_route('user');
+    }
+
+    /**
      * Generate and store an avatar image for the user.
      */
-    private function generateAvatar(string $identifier): string
+    private function generateAvatar(string $identifier, ?string $existingFilename = null): string
     {
-        $filename = Str::uuid().'.svg';
+        $filename = $existingFilename ?? Str::uuid().'.svg';
         $relativePath = 'avatars/'.$filename;
 
         Storage::disk('public')->makeDirectory('avatars');
