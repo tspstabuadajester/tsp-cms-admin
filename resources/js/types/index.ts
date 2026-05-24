@@ -48,10 +48,17 @@ export interface User {
     email: string;
     avatar?: string; // filename only, e.g. "uuid.svg"
     status?: 'active' | 'inactive';
+    business_id?: number | null;
     email_verified_at: string | null;
     created_at: string;
     updated_at: string;
 }
+
+export type BusinessOption = Pick<Business, 'id' | 'name'>;
+
+export type RoleOption = {
+    name: string;
+};
 
 export interface Business {
     id: number;

@@ -6,9 +6,23 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import AppLayout from '@/layouts/AppLayout.vue';
 import SettingsLayout from '@/layouts/settings/Layout.vue';
-import { type BreadcrumbItem } from '@/types';
+import { type BreadcrumbItem, type BusinessOption, type RoleOption } from '@/types';
 import { Head, Link, useForm } from '@inertiajs/vue3';
 import { LoaderCircle } from 'lucide-vue-next';
+
+defineProps<{
+    businesses: BusinessOption[];
+    roles: RoleOption[];
+}>();
+
+const formatRoleName = (name: string) =>
+    name
+        .split('-')
+        .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+        .join(' ');
+
+const selectClass =
+    'flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-base ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 md:text-sm';
 
 const breadcrumbs: BreadcrumbItem[] = [
     {
@@ -24,6 +38,8 @@ const breadcrumbs: BreadcrumbItem[] = [
 const form = useForm({
     name: '',
     email: '',
+    business_id: '' as string | number,
+    role: '',
     password: '',
     password_confirmation: '',
 });
@@ -69,6 +85,28 @@ const submit = () => {
                         placeholder="email@example.com"
                     />
                     <InputError :message="form.errors.email" />
+                </div>
+
+                <div class="grid gap-2">
+                    <Label for="business_id">Business</Label>
+                    <select id="business_id" v-model="form.business_id" :class="selectClass">
+                        <option value="">No business</option>
+                        <option v-for="business in businesses" :key="business.id" :value="business.id">
+                            {{ business.name }}
+                        </option>
+                    </select>
+                    <InputError :message="form.errors.business_id" />
+                </div>
+
+                <div class="grid gap-2">
+                    <Label for="role">Role</Label>
+                    <select id="role" v-model="form.role" required :class="selectClass">
+                        <option value="" disabled>Select a role</option>
+                        <option v-for="role in roles" :key="role.name" :value="role.name">
+                            {{ formatRoleName(role.name) }}
+                        </option>
+                    </select>
+                    <InputError :message="form.errors.role" />
                 </div>
 
                 <div class="grid gap-2">

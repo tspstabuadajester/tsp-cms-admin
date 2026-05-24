@@ -2,7 +2,10 @@
 
 namespace App\Http\Requests\User;
 
+use App\Models\Business;
 use App\Models\User;
+use App\Support\AssignableUserRoles;
+use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\Rules;
@@ -10,13 +13,23 @@ use Illuminate\Validation\Rules;
 class UpdateUserRequest extends FormRequest
 {
     /**
+     * Prepare the data for validation.
+     */
+    protected function prepareForValidation(): void
+    {
+        if ($this->input('business_id') === '') {
+            $this->merge(['business_id' => null]);
+        }
+    }
+
+    /**
      * Get the validation rules that apply to the request.
      *
-     * @return array<string, \Illuminate\Contracts\Validation\ValidationRule|array<mixed>|string>
+     * @return array<string, ValidationRule|array<mixed>|string>
      */
     public function rules(): array
     {
-        return [
+        $rules = [
             'name' => ['required', 'string', 'max:255'],
             'email' => [
                 'required',
@@ -28,6 +41,22 @@ class UpdateUserRequest extends FormRequest
             ],
             'password' => ['nullable', 'confirmed', Rules\Password::defaults()],
             'status' => ['required', Rule::in(['active', 'inactive'])],
+            'business_id' => [
+                'nullable',
+                'integer',
+                Rule::when(
+                    filled($this->input('business_id'))
+                        && (int) $this->input('business_id') === $this->route('user')?->business_id,
+                    Rule::exists(Business::class, 'id'),
+                    Rule::exists(Business::class, 'id')->where('status', 'active'),
+                ),
+            ],
         ];
+
+        if (! $this->route('user')?->hasRole('super-admin')) {
+            $rules['role'] = ['required', 'string', AssignableUserRoles::validationRule()];
+        }
+
+        return $rules;
     }
 }

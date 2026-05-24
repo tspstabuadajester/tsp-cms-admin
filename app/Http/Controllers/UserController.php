@@ -4,7 +4,10 @@ namespace App\Http\Controllers;
 
 use App\Http\Requests\User\StoreUserRequest;
 use App\Http\Requests\User\UpdateUserRequest;
+use App\Models\Business;
 use App\Models\User;
+use App\Support\AssignableUserRoles;
+use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
@@ -31,7 +34,10 @@ class UserController extends Controller
      */
     public function create(): Response
     {
-        return Inertia::render('User/Create');
+        return Inertia::render('User/Create', [
+            'businesses' => $this->businessesForSelect(),
+            'roles' => AssignableUserRoles::forSelect(),
+        ]);
     }
 
     /**
@@ -41,12 +47,15 @@ class UserController extends Controller
     {
         $validated = $request->validated();
 
-        User::create([
+        $user = User::create([
             'name' => $validated['name'],
             'email' => $validated['email'],
             'password' => $validated['password'],
             'avatar' => $this->generateAvatar($validated['name']),
+            'business_id' => $validated['business_id'] ?? null,
         ]);
+
+        $user->assignRole($validated['role']);
 
         return to_route('user')->with('toast', [
             'message' => 'User created successfully.',
@@ -59,8 +68,16 @@ class UserController extends Controller
      */
     public function edit(User $user): Response
     {
+        $isSuperAdmin = $user->hasRole('super-admin');
+
         return Inertia::render('User/Edit', [
-            'user' => $user->only(['id', 'name', 'email', 'avatar', 'status']),
+            'user' => array_merge(
+                $user->only(['id', 'name', 'email', 'avatar', 'status', 'business_id']),
+                ['role' => $user->getRoleNames()->first()],
+            ),
+            'businesses' => $this->businessesForSelect($user->business_id),
+            'roles' => AssignableUserRoles::forSelect(),
+            'roleEditable' => ! $isSuperAdmin,
         ]);
     }
 
@@ -76,6 +93,7 @@ class UserController extends Controller
             'name' => $validated['name'],
             'email' => $validated['email'],
             'status' => $validated['status'],
+            'business_id' => $validated['business_id'] ?? null,
         ]);
 
         if ($user->isDirty('email')) {
@@ -92,10 +110,33 @@ class UserController extends Controller
 
         $user->save();
 
+        if (! $user->hasRole('super-admin') && isset($validated['role'])) {
+            $user->syncRoles([$validated['role']]);
+        }
+
         return to_route('user')->with('toast', [
             'message' => 'User updated successfully.',
             'variant' => 'success',
         ]);
+    }
+
+    /**
+     * Active businesses for select dropdowns; includes the user's current business when inactive.
+     *
+     * @return Collection<int, Business>
+     */
+    private function businessesForSelect(?int $includeBusinessId = null)
+    {
+        return Business::query()
+            ->where(function ($query) use ($includeBusinessId) {
+                $query->where('status', 'active');
+
+                if ($includeBusinessId !== null) {
+                    $query->orWhere('id', $includeBusinessId);
+                }
+            })
+            ->orderBy('name')
+            ->get(['id', 'name']);
     }
 
     /**
