@@ -6,12 +6,13 @@ import { usePermissions } from '@/composables/usePermissions';
 import { formatUserStatus, userStatusVariant } from '@/composables/useUserStatus';
 import AppLayout from '@/layouts/AppLayout.vue';
 import SettingsLayout from '@/layouts/settings/Layout.vue';
-import { type BreadcrumbItem, type Business } from '@/types';
+import PaginationLinks from '@/components/PaginationLinks.vue';
+import { type BreadcrumbItem, type Business, type Paginated } from '@/types';
 import { Head, Link } from '@inertiajs/vue3';
 import { Pencil, Plus } from 'lucide-vue-next';
 
 defineProps<{
-    businesses: Business[];
+    businesses: Paginated<Business>;
 }>();
 
 const { can } = usePermissions();
@@ -61,11 +62,11 @@ const formatDate = (date: string) => {
                             </tr>
                         </thead>
                         <tbody>
-                            <tr v-if="businesses.length === 0">
+                            <tr v-if="businesses.data.length === 0">
                                 <td colspan="6" class="p-4 text-center text-muted-foreground">No businesses found.</td>
                             </tr>
                             <tr
-                                v-for="business in businesses"
+                                v-for="business in businesses.data"
                                 :key="business.id"
                                 class="border-b transition-colors last:border-0 hover:bg-muted/50"
                             >
@@ -89,6 +90,7 @@ const formatDate = (date: string) => {
                             </tr>
                         </tbody>
                     </table>
+                    <PaginationLinks :pagination="businesses" />
                 </div>
             </div>
         </SettingsLayout>

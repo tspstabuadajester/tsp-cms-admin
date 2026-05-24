@@ -27,7 +27,8 @@ class UserController extends Controller
         return Inertia::render('User/Index', [
             'users' => $this->scopedUsersQuery()
                 ->orderBy('name')
-                ->get(['id', 'name', 'email', 'avatar', 'status', 'created_at']),
+                ->paginate(10, ['id', 'name', 'email', 'avatar', 'status', 'created_at'])
+                ->withQueryString(),
         ]);
     }
 

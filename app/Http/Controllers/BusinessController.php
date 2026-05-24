@@ -20,7 +20,8 @@ class BusinessController extends Controller
         return Inertia::render('Businesses/Index', [
             'businesses' => Business::query()
                 ->orderBy('name')
-                ->get(['id', 'uuid', 'name', 'address', 'email', 'status', 'created_at']),
+                ->paginate(10, ['id', 'uuid', 'name', 'address', 'email', 'status', 'created_at'])
+                ->withQueryString(),
         ]);
     }
 

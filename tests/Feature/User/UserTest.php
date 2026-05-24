@@ -154,10 +154,11 @@ class UserTest extends TestCase
             ->get(route('user'))
             ->assertOk()
             ->assertViewHas('page', function (array $page) use ($unscopedUser): bool {
-                $userIds = collect($page['props']['users'])->pluck('id')->all();
+                $userIds = collect($page['props']['users']['data'])->pluck('id')->all();
 
                 return $page['component'] === 'User/Index'
                     && count($userIds) === 4
+                    && $page['props']['users']['per_page'] === 10
                     && in_array($unscopedUser->id, $userIds, true);
             });
     }
@@ -177,7 +178,7 @@ class UserTest extends TestCase
             ->get(route('user'))
             ->assertOk()
             ->assertViewHas('page', function (array $page) use ($inBusiness, $outsideUser, $unscopedUser, $scopedManager): bool {
-                $userIds = collect($page['props']['users'])->pluck('id')->all();
+                $userIds = collect($page['props']['users']['data'])->pluck('id')->all();
 
                 return $page['component'] === 'User/Index'
                     && count($userIds) === 2

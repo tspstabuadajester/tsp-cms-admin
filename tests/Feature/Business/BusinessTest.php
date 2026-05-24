@@ -89,7 +89,7 @@ class BusinessTest extends TestCase
             ->assertOk()
             ->assertViewHas('page', function (array $page): bool {
                 return $page['component'] === 'Businesses/Index'
-                    && count($page['props']['businesses']) === 2;
+                    && count($page['props']['businesses']['data']) === 2;
             });
     }
 

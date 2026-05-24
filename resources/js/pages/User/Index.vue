@@ -9,12 +9,13 @@ import { usePermissions } from '@/composables/usePermissions';
 import { formatUserStatus, userStatusVariant } from '@/composables/useUserStatus';
 import AppLayout from '@/layouts/AppLayout.vue';
 import SettingsLayout from '@/layouts/settings/Layout.vue';
-import { type BreadcrumbItem, type User } from '@/types';
+import PaginationLinks from '@/components/PaginationLinks.vue';
+import { type BreadcrumbItem, type Paginated, type User } from '@/types';
 import { Head, Link } from '@inertiajs/vue3';
 import { Pencil, Plus } from 'lucide-vue-next';
 
 defineProps<{
-    users: User[];
+    users: Paginated<User>;
 }>();
 
 const { getInitials } = useInitials();
@@ -66,11 +67,11 @@ const formatDate = (date: string) => {
                             </tr>
                         </thead>
                         <tbody>
-                            <tr v-if="users.length === 0">
+                            <tr v-if="users.data.length === 0">
                                 <td colspan="6" class="p-4 text-center text-muted-foreground">No users found.</td>
                             </tr>
                             <tr
-                                v-for="user in users"
+                                v-for="user in users.data"
                                 :key="user.id"
                                 class="border-b transition-colors last:border-0 hover:bg-muted/50"
                             >
@@ -105,6 +106,7 @@ const formatDate = (date: string) => {
                             </tr>
                         </tbody>
                     </table>
+                    <PaginationLinks :pagination="users" />
                 </div>
             </div>
         </SettingsLayout>
