@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\BusinessController;
 use App\Http\Controllers\UserController;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
@@ -25,6 +26,10 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::post('/', [UserController::class, 'store'])->name('user.store');
         Route::get('/{user}/edit', [UserController::class, 'edit'])->name('user.edit');
         Route::put('/{user}', [UserController::class, 'update'])->name('user.update');
+    });
+
+    Route::prefix('business')->middleware('permission:business.manage')->group(function () {
+        Route::get('/', [BusinessController::class, 'index'])->name('business');
     });
 });
 

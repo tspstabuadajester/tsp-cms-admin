@@ -36,6 +36,11 @@ const sidebarNavItems: SettingsNavItem[] = [
         permission: 'settings.manage',
     },
     {
+        title: 'Businesses',
+        href: '/business',
+        permission: 'business.manage',
+    },
+    {
         title: 'Appearance',
         href: '/settings/appearance',
         permission: 'settings.manage',
