@@ -5,6 +5,7 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import { useAvatarUrl } from '@/composables/useAvatarUrl';
 import { useInitials } from '@/composables/useInitials';
+import { usePermissions } from '@/composables/usePermissions';
 import { formatUserStatus, userStatusVariant } from '@/composables/useUserStatus';
 import AppLayout from '@/layouts/AppLayout.vue';
 import SettingsLayout from '@/layouts/settings/Layout.vue';
@@ -18,6 +19,7 @@ defineProps<{
 
 const { getInitials } = useInitials();
 const { avatarUrl } = useAvatarUrl();
+const { can } = usePermissions();
 
 const breadcrumbs: BreadcrumbItem[] = [
     {
@@ -43,7 +45,7 @@ const formatDate = (date: string) => {
             <div class="flex flex-col gap-4">
                 <div class="flex items-center justify-between gap-4">
                     <HeadingSmall title="Users" description="Manage all users in the system" />
-                    <Button as-child>
+                    <Button v-if="can('settings.manage')" as-child>
                         <Link :href="route('user.create')">
                             <Plus class="size-4" />
                             Create User
@@ -92,14 +94,14 @@ const formatDate = (date: string) => {
                                     </StatusBadge>
                                 </td>
                                 <td class="p-4 align-middle text-muted-foreground">{{ formatDate(user.created_at) }}</td>
-                                <td class="p-4 align-middle text-right">
-                                    <Button variant="outline" size="sm" as-child>
-                                        <Link :href="route('user.edit', user.id)">
-                                            <Pencil class="size-4" />
-                                            Edit
-                                        </Link>
-                                    </Button>
-                                </td>
+                            <td class="p-4 align-middle text-right">
+                                <Button v-if="can('settings.manage')" variant="outline" size="sm" as-child>
+                                    <Link :href="route('user.edit', user.id)">
+                                        <Pencil class="size-4" />
+                                        Edit
+                                    </Link>
+                                </Button>
+                            </td>
                             </tr>
                         </tbody>
                     </table>

@@ -19,7 +19,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
         })->name('websites');
     });
 
-    Route::prefix('user')->group(function () {
+    Route::prefix('user')->middleware('permission:settings.manage')->group(function () {
         Route::get('/', [UserController::class, 'index'])->name('user');
         Route::get('/create', [UserController::class, 'create'])->name('user.create');
         Route::post('/', [UserController::class, 'store'])->name('user.store');

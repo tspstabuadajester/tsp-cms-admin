@@ -6,6 +6,7 @@ use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Storage;
+use Spatie\Permission\Models\Permission;
 use Tests\TestCase;
 
 class UserTest extends TestCase
@@ -15,6 +16,19 @@ class UserTest extends TestCase
     private function validPassword(): string
     {
         return 'Password1!';
+    }
+
+    private function createSettingsManager(array $attributes = []): User
+    {
+        Permission::firstOrCreate([
+            'name' => 'settings.manage',
+            'guard_name' => 'web',
+        ]);
+
+        $user = User::factory()->create($attributes);
+        $user->givePermissionTo('settings.manage');
+
+        return $user;
     }
 
     /**
@@ -57,9 +71,21 @@ class UserTest extends TestCase
         $this->put(route('user.update', $user), $this->validUpdatePayload($user))->assertRedirect(route('login'));
     }
 
+    public function test_users_without_settings_manage_permission_cannot_access_user_routes(): void
+    {
+        $user = User::factory()->create();
+        $targetUser = User::factory()->create();
+
+        $this->actingAs($user)->get(route('user'))->assertForbidden();
+        $this->actingAs($user)->get(route('user.create'))->assertForbidden();
+        $this->actingAs($user)->post(route('user.store'), $this->validStorePayload())->assertForbidden();
+        $this->actingAs($user)->get(route('user.edit', $targetUser))->assertForbidden();
+        $this->actingAs($user)->put(route('user.update', $targetUser), $this->validUpdatePayload($targetUser))->assertForbidden();
+    }
+
     public function test_authenticated_users_can_view_user_index(): void
     {
-        $admin = User::factory()->create();
+        $admin = $this->createSettingsManager();
 
         $response = $this->actingAs($admin)->get(route('user'));
 
@@ -68,7 +94,7 @@ class UserTest extends TestCase
 
     public function test_authenticated_users_can_view_create_user_page(): void
     {
-        $admin = User::factory()->create();
+        $admin = $this->createSettingsManager();
 
         $response = $this->actingAs($admin)->get(route('user.create'));
 
@@ -79,7 +105,7 @@ class UserTest extends TestCase
     {
         Storage::fake('public');
 
-        $admin = User::factory()->create();
+        $admin = $this->createSettingsManager();
 
         $response = $this->actingAs($admin)->post(route('user.store'), $this->validStorePayload([
             'name' => 'New User',
@@ -104,7 +130,7 @@ class UserTest extends TestCase
 
     public function test_user_creation_requires_valid_data(): void
     {
-        $admin = User::factory()->create();
+        $admin = $this->createSettingsManager();
         User::factory()->create(['email' => 'existing@example.com']);
 
         $this->actingAs($admin)
@@ -122,7 +148,7 @@ class UserTest extends TestCase
 
     public function test_authenticated_users_can_view_edit_user_page(): void
     {
-        $admin = User::factory()->create();
+        $admin = $this->createSettingsManager();
         $user = User::factory()->create();
 
         $response = $this->actingAs($admin)->get(route('user.edit', $user));
@@ -134,7 +160,7 @@ class UserTest extends TestCase
     {
         Storage::fake('public');
 
-        $admin = User::factory()->create();
+        $admin = $this->createSettingsManager();
         $user = User::factory()->create([
             'name' => 'Original Name',
             'email' => 'original@example.com',
@@ -165,7 +191,7 @@ class UserTest extends TestCase
 
     public function test_user_update_keeps_email_verification_when_email_is_unchanged(): void
     {
-        $admin = User::factory()->create();
+        $admin = $this->createSettingsManager();
         $user = User::factory()->create([
             'email' => 'verified@example.com',
             'status' => 'active',
@@ -188,7 +214,7 @@ class UserTest extends TestCase
 
     public function test_user_update_can_change_password(): void
     {
-        $admin = User::factory()->create();
+        $admin = $this->createSettingsManager();
         $user = User::factory()->create();
 
         $this->actingAs($admin)
@@ -206,7 +232,7 @@ class UserTest extends TestCase
     {
         Storage::fake('public');
 
-        $admin = User::factory()->create();
+        $admin = $this->createSettingsManager();
         $user = User::factory()->create([
             'name' => 'Original Name',
             'avatar' => 'existing-avatar.svg',
@@ -230,7 +256,7 @@ class UserTest extends TestCase
 
     public function test_user_update_requires_valid_data(): void
     {
-        $admin = User::factory()->create();
+        $admin = $this->createSettingsManager();
         $user = User::factory()->create(['email' => 'user@example.com']);
         User::factory()->create(['email' => 'taken@example.com']);
 

@@ -2,18 +2,26 @@
 import Heading from '@/components/Heading.vue';
 import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
+import { usePermissions } from '@/composables/usePermissions';
 import { type NavItem } from '@/types';
 import { Link, usePage } from '@inertiajs/vue3';
+import { computed } from 'vue';
 
 interface Props {
     fullWidth?: boolean;
 }
 
+type SettingsNavItem = NavItem & {
+    permission?: string;
+};
+
 withDefaults(defineProps<Props>(), {
     fullWidth: false,
 });
 
-const sidebarNavItems: NavItem[] = [
+const { can } = usePermissions();
+
+const sidebarNavItems: SettingsNavItem[] = [
     {
         title: 'Profile',
         href: '/settings/profile',
@@ -25,12 +33,18 @@ const sidebarNavItems: NavItem[] = [
     {
         title: 'User',
         href: '/user',
+        permission: 'settings.manage',
     },
     {
         title: 'Appearance',
         href: '/settings/appearance',
+        permission: 'settings.manage',
     },
 ];
+
+const visibleNavItems = computed(() =>
+    sidebarNavItems.filter((item) => !item.permission || can(item.permission)),
+);
 
 const page = usePage();
 
@@ -51,7 +65,7 @@ const isNavItemActive = (href: string): boolean => {
             <aside class="w-full max-w-xl lg:w-48">
                 <nav class="flex flex-col space-x-0 space-y-1">
                     <Button
-                        v-for="item in sidebarNavItems"
+                        v-for="item in visibleNavItems"
                         :key="item.href"
                         variant="ghost"
                         :class="['w-full justify-start', { 'bg-muted': isNavItemActive(item.href) }]"
