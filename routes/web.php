@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\UserController;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
 
@@ -7,17 +8,22 @@ Route::get('/', function () {
     return Inertia::render('Welcome');
 })->name('home');
 
-Route::get('dashboard', function () {
-    return Inertia::render('Dashboard');
-})->middleware(['auth', 'verified'])->name('dashboard');
+Route::middleware(['auth', 'verified'])->group(function () {
+    Route::get('dashboard', function () {
+        return Inertia::render('Dashboard');
+    })->name('dashboard');
 
-Route::get('websites', function () {
-    return Inertia::render('Websites/Index');
-})->middleware(['auth', 'verified'])->name('websites');
+    Route::prefix('websites')->group(function () {
+        Route::get('/', function () {
+            return Inertia::render('Websites/Index');
+        })->name('websites');
+    });
 
-Route::get('user', function () {
-    return Inertia::render('User/Index');
-})->middleware(['auth', 'verified'])->name('user');
+    Route::prefix('user')->group(function () {
+        Route::get('/', [UserController::class, 'index'])->name('user');
+        Route::get('/create', [UserController::class, 'create'])->name('user.create');
+    });
+});
 
 require __DIR__.'/settings.php';
 require __DIR__.'/auth.php';
