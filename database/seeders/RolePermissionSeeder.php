@@ -17,6 +17,7 @@ class RolePermissionSeeder extends Seeder
         app()[PermissionRegistrar::class]->forgetCachedPermissions();
 
         $permissions = [
+            'businesses.manage',
             'websites.manage',
             'settings.manage',
         ];
@@ -28,20 +29,31 @@ class RolePermissionSeeder extends Seeder
             ]);
         }
 
-        $admin = Role::firstOrCreate([
-            'name' => 'admin',
+        $superAdmin = Role::firstOrCreate([
+            'name' => 'super-admin',
             'guard_name' => 'web',
         ]);
 
-        $manager = Role::firstOrCreate([
-            'name' => 'manager',
+        $superAdmin->syncPermissions($permissions);
+
+        $businessAdmin = Role::firstOrCreate([
+            'name' => 'business-admin',
             'guard_name' => 'web',
         ]);
 
-        $admin->syncPermissions($permissions);
-
-        $manager->syncPermissions([
+        $businessAdmin->syncPermissions([
             'websites.manage',
+            'settings.manage',
         ]);
+
+        $contentManager = Role::firstOrCreate([
+            'name' => 'content-manager',
+            'guard_name' => 'web',
+        ]);
+
+        $contentManager->syncPermissions([
+            'websites.manage'
+        ]);
+
     }
 }
