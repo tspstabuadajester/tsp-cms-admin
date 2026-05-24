@@ -1,9 +1,11 @@
 <script setup lang="ts">
 import HeadingSmall from '@/components/HeadingSmall.vue';
+import { StatusBadge } from '@/components/StatusBadge';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import { useAvatarUrl } from '@/composables/useAvatarUrl';
 import { useInitials } from '@/composables/useInitials';
+import { formatUserStatus, userStatusVariant } from '@/composables/useUserStatus';
 import AppLayout from '@/layouts/AppLayout.vue';
 import { type BreadcrumbItem, type User } from '@/types';
 import { Head, Link } from '@inertiajs/vue3';
@@ -54,6 +56,7 @@ const formatDate = (date: string) => {
                             <th class="h-10 w-14 px-4 text-left align-middle font-medium text-muted-foreground">Avatar</th>
                             <th class="h-10 px-4 text-left align-middle font-medium text-muted-foreground">Name</th>
                             <th class="h-10 px-4 text-left align-middle font-medium text-muted-foreground">Email</th>
+                            <th class="h-10 px-4 text-left align-middle font-medium text-muted-foreground">Status</th>
                             <th class="h-10 px-4 text-left align-middle font-medium text-muted-foreground">Verified</th>
                             <th class="h-10 px-4 text-left align-middle font-medium text-muted-foreground">Created</th>
                             <th class="h-10 w-24 px-4 text-right align-middle font-medium text-muted-foreground">Actions</th>
@@ -61,7 +64,7 @@ const formatDate = (date: string) => {
                     </thead>
                     <tbody>
                         <tr v-if="users.length === 0">
-                            <td colspan="6" class="p-4 text-center text-muted-foreground">No users found.</td>
+                            <td colspan="7" class="p-4 text-center text-muted-foreground">No users found.</td>
                         </tr>
                         <tr
                             v-for="user in users"
@@ -82,6 +85,11 @@ const formatDate = (date: string) => {
                             </td>
                             <td class="p-4 align-middle font-medium">{{ user.name }}</td>
                             <td class="p-4 align-middle">{{ user.email }}</td>
+                            <td class="p-4 align-middle">
+                                <StatusBadge :variant="userStatusVariant(user.status)">
+                                    {{ formatUserStatus(user.status) }}
+                                </StatusBadge>
+                            </td>
                             <td class="p-4 align-middle">
                                 <span
                                     :class="[

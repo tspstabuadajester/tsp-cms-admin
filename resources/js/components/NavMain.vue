@@ -9,6 +9,14 @@ defineProps<{
 }>();
 
 const page = usePage<SharedData>();
+
+const isNavItemActive = (href: string): boolean => {
+    if (page.url === href) {
+        return true;
+    }
+
+    return page.url.startsWith(`${href}/`);
+};
 </script>
 
 <template>
@@ -16,7 +24,7 @@ const page = usePage<SharedData>();
         <SidebarGroupLabel>Platform</SidebarGroupLabel>
         <SidebarMenu>
             <SidebarMenuItem v-for="item in items" :key="item.title">
-                <SidebarMenuButton as-child :is-active="item.href === page.url">
+                <SidebarMenuButton as-child :is-active="isNavItemActive(item.href)">
                     <Link :href="item.href">
                         <NavIcon v-if="item.iconSrc" :src="item.iconSrc" :alt="item.title" />
                         <component v-else-if="item.icon" :is="item.icon" />

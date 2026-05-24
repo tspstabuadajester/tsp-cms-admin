@@ -22,7 +22,7 @@ class UserController extends Controller
         return Inertia::render('User/Index', [
             'users' => User::query()
                 ->orderBy('name')
-                ->get(['id', 'name', 'email', 'avatar', 'email_verified_at', 'created_at']),
+                ->get(['id', 'name', 'email', 'avatar', 'status', 'email_verified_at', 'created_at']),
         ]);
     }
 
