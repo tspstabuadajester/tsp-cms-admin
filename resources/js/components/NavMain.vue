@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import NavIcon from '@/components/NavIcon.vue';
 import { SidebarGroup, SidebarGroupLabel, SidebarMenu, SidebarMenuButton, SidebarMenuItem } from '@/components/ui/sidebar';
 import { type NavItem, type SharedData } from '@/types';
 import { Link, usePage } from '@inertiajs/vue3';
@@ -17,7 +18,8 @@ const page = usePage<SharedData>();
             <SidebarMenuItem v-for="item in items" :key="item.title">
                 <SidebarMenuButton as-child :is-active="item.href === page.url">
                     <Link :href="item.href">
-                        <component :is="item.icon" />
+                        <NavIcon v-if="item.iconSrc" :src="item.iconSrc" :alt="item.title" />
+                        <component v-else-if="item.icon" :is="item.icon" />
                         <span>{{ item.title }}</span>
                     </Link>
                 </SidebarMenuButton>

@@ -13,6 +13,7 @@ export interface NavItem {
     title: string;
     href: string;
     icon?: LucideIcon;
+    iconSrc?: string;
     isActive?: boolean;
 }
 
