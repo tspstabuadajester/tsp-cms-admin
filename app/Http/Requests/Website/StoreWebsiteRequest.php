@@ -16,12 +16,6 @@ class StoreWebsiteRequest extends FormRequest
      */
     protected function prepareForValidation(): void
     {
-        foreach (['primary_domain', 'business_id'] as $field) {
-            if ($this->input($field) === '') {
-                $this->merge([$field => null]);
-            }
-        }
-
         if ($businessId = BusinessUserScope::scopedBusinessId($this->user())) {
             $this->merge(['business_id' => $businessId]);
         }
@@ -43,7 +37,7 @@ class StoreWebsiteRequest extends FormRequest
                 'regex:/^[a-z0-9]+(?:-[a-z0-9]+)*$/',
                 Rule::unique(Website::class),
             ],
-            'primary_domain' => ['nullable', 'string', 'max:255', Rule::unique(Website::class)],
+            'primary_domain' => ['required', 'string', 'max:255', Rule::unique(Website::class)],
             'business_id' => $this->businessIdRules(),
             'status' => ['required', Rule::in(['active', 'inactive'])],
             'logo' => ['nullable', 'image', 'max:2048'],
@@ -60,7 +54,7 @@ class StoreWebsiteRequest extends FormRequest
         }
 
         return [
-            'nullable',
+            'required',
             'integer',
             Rule::exists(Business::class, 'id')->where('status', 'active'),
         ];

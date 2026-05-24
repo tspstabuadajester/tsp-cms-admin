@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import HeadingSmall from '@/components/HeadingSmall.vue';
 import InputError from '@/components/InputError.vue';
+import LoadingOverlay from '@/components/LoadingOverlay.vue';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -8,7 +9,6 @@ import AppLayout from '@/layouts/AppLayout.vue';
 import SettingsLayout from '@/layouts/settings/Layout.vue';
 import { type BreadcrumbItem } from '@/types';
 import { Head, Link, useForm } from '@inertiajs/vue3';
-import { LoaderCircle } from 'lucide-vue-next';
 
 const breadcrumbs: BreadcrumbItem[] = [
     {
@@ -37,6 +37,8 @@ const submit = () => {
     <Head title="Create Business" />
 
     <AppLayout :breadcrumbs="breadcrumbs">
+        <LoadingOverlay :show="form.processing" />
+
         <SettingsLayout>
             <div class="flex flex-col gap-6">
                 <HeadingSmall title="Create business" description="Add a new business to the system" />
@@ -86,10 +88,7 @@ const submit = () => {
                     </div>
 
                     <div class="flex items-center gap-4">
-                        <Button type="submit" :disabled="form.processing">
-                            <LoaderCircle v-if="form.processing" class="size-4 animate-spin" />
-                            Create Business
-                        </Button>
+                        <Button type="submit" :disabled="form.processing">Create Business</Button>
                         <Button variant="outline" as-child>
                             <Link :href="route('business')">Cancel</Link>
                         </Button>

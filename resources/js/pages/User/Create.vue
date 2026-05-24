@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import HeadingSmall from '@/components/HeadingSmall.vue';
 import InputError from '@/components/InputError.vue';
+import LoadingOverlay from '@/components/LoadingOverlay.vue';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -8,7 +9,6 @@ import AppLayout from '@/layouts/AppLayout.vue';
 import SettingsLayout from '@/layouts/settings/Layout.vue';
 import { type BreadcrumbItem, type BusinessOption, type RoleOption } from '@/types';
 import { Head, Link, useForm } from '@inertiajs/vue3';
-import { LoaderCircle } from 'lucide-vue-next';
 
 defineProps<{
     businesses: BusinessOption[];
@@ -56,6 +56,8 @@ const submit = () => {
     <Head title="Create User" />
 
     <AppLayout :breadcrumbs="breadcrumbs">
+        <LoadingOverlay :show="form.processing" />
+
         <SettingsLayout>
             <div class="flex flex-col gap-6">
             <HeadingSmall title="Create user" description="Add a new user to the system" />
@@ -140,10 +142,7 @@ const submit = () => {
                 </div>
 
                 <div class="flex items-center gap-4">
-                    <Button type="submit" :disabled="form.processing">
-                        <LoaderCircle v-if="form.processing" class="size-4 animate-spin" />
-                        Create User
-                    </Button>
+                    <Button type="submit" :disabled="form.processing">Create User</Button>
                     <Button variant="outline" as-child>
                         <Link :href="route('user')">Cancel</Link>
                     </Button>

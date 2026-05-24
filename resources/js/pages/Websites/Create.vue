@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import HeadingSmall from '@/components/HeadingSmall.vue';
 import InputError from '@/components/InputError.vue';
+import LoadingOverlay from '@/components/LoadingOverlay.vue';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -8,7 +9,6 @@ import AppLayout from '@/layouts/AppLayout.vue';
 import { type BreadcrumbItem, type BusinessOption } from '@/types';
 import { slugFromName } from '@/lib/slug';
 import { Head, Link, useForm } from '@inertiajs/vue3';
-import { LoaderCircle } from 'lucide-vue-next';
 import { onBeforeUnmount, ref, watch } from 'vue';
 
 defineProps<{
@@ -92,6 +92,8 @@ onBeforeUnmount(revokePreview);
     <Head title="Create Website" />
 
     <AppLayout :breadcrumbs="breadcrumbs">
+        <LoadingOverlay :show="form.processing" />
+
         <div class="flex flex-1 flex-col gap-6 p-4 md:max-w-2xl">
             <HeadingSmall title="Create website" description="Add a new website to the system" />
 
@@ -128,6 +130,7 @@ onBeforeUnmount(revokePreview);
                     <Input
                         id="primary_domain"
                         type="text"
+                        required
                         v-model="form.primary_domain"
                         placeholder="www.example.com"
                     />
@@ -157,8 +160,8 @@ onBeforeUnmount(revokePreview);
 
                 <div v-if="showBusinessField" class="grid gap-2">
                     <Label for="business_id">Business</Label>
-                    <select id="business_id" v-model="form.business_id" :class="selectClass">
-                        <option value="">No business</option>
+                    <select id="business_id" v-model="form.business_id" required :class="selectClass">
+                        <option value="" disabled>Select a business</option>
                         <option v-for="business in businesses" :key="business.id" :value="business.id">
                             {{ business.name }}
                         </option>
@@ -176,10 +179,7 @@ onBeforeUnmount(revokePreview);
                 </div>
 
                 <div class="flex items-center gap-4">
-                    <Button type="submit" :disabled="form.processing">
-                        <LoaderCircle v-if="form.processing" class="size-4 animate-spin" />
-                        Create Website
-                    </Button>
+                    <Button type="submit" :disabled="form.processing">Create Website</Button>
                     <Button variant="outline" as-child>
                         <Link :href="route('websites')">Cancel</Link>
                     </Button>
