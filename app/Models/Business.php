@@ -15,5 +15,6 @@ class Business extends Model
         'address',
         'phone',
         'email',
+        'status',
     ];
 }

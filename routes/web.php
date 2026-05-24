@@ -32,6 +32,8 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::get('/', [BusinessController::class, 'index'])->name('business');
         Route::get('/create', [BusinessController::class, 'create'])->name('business.create');
         Route::post('/', [BusinessController::class, 'store'])->name('business.store');
+        Route::get('/{business}/edit', [BusinessController::class, 'edit'])->name('business.edit');
+        Route::put('/{business}', [BusinessController::class, 'update'])->name('business.update');
     });
 });
 
