@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\BusinessController;
 use App\Http\Controllers\UserController;
+use App\Http\Controllers\WebsiteController;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
 
@@ -14,10 +15,10 @@ Route::middleware(['auth', 'verified'])->group(function () {
         return Inertia::render('Dashboard');
     })->name('dashboard');
 
-    Route::prefix('websites')->group(function () {
-        Route::get('/', function () {
-            return Inertia::render('Websites/Index');
-        })->name('websites');
+    Route::prefix('websites')->middleware('permission:websites.manage')->group(function () {
+        Route::get('/', [WebsiteController::class, 'index'])->name('websites');
+        Route::get('/create', [WebsiteController::class, 'create'])->name('websites.create');
+        Route::post('/', [WebsiteController::class, 'store'])->name('websites.store');
     });
 
     Route::prefix('user')->middleware('permission:settings.manage')->group(function () {

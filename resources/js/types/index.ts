@@ -60,6 +60,21 @@ export type RoleOption = {
     name: string;
 };
 
+export interface Website {
+    id: number;
+    uuid: string;
+    name: string;
+    slug: string;
+    primary_domain: string | null;
+    business_id: number | null;
+    status: 'active' | 'inactive';
+    seo_defaults: Record<string, unknown> | null;
+    settings: Record<string, unknown> | null;
+    published_at: string | null;
+    created_at: string;
+    updated_at: string;
+}
+
 export interface Business {
     id: number;
     uuid: string;
