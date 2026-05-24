@@ -12,11 +12,11 @@ Route::get('dashboard', function () {
 })->middleware(['auth', 'verified'])->name('dashboard');
 
 Route::get('websites', function () {
-    return Inertia::render('Websites');
+    return Inertia::render('Websites/Index');
 })->middleware(['auth', 'verified'])->name('websites');
 
 Route::get('user', function () {
-    return Inertia::render('User');
+    return Inertia::render('User/Index');
 })->middleware(['auth', 'verified'])->name('user');
 
 require __DIR__.'/settings.php';
