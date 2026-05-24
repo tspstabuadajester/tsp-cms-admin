@@ -5,6 +5,7 @@ namespace App\Http\Requests\User;
 use App\Models\Business;
 use App\Models\User;
 use App\Support\AssignableUserRoles;
+use App\Support\BusinessUserScope;
 use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
@@ -19,6 +20,10 @@ class UpdateUserRequest extends FormRequest
     {
         if ($this->input('business_id') === '') {
             $this->merge(['business_id' => null]);
+        }
+
+        if ($businessId = BusinessUserScope::scopedBusinessId($this->user())) {
+            $this->merge(['business_id' => $businessId]);
         }
     }
 
@@ -41,16 +46,7 @@ class UpdateUserRequest extends FormRequest
             ],
             'password' => ['nullable', 'confirmed', Rules\Password::defaults()],
             'status' => ['required', Rule::in(['active', 'inactive'])],
-            'business_id' => [
-                'nullable',
-                'integer',
-                Rule::when(
-                    filled($this->input('business_id'))
-                        && (int) $this->input('business_id') === $this->route('user')?->business_id,
-                    Rule::exists(Business::class, 'id'),
-                    Rule::exists(Business::class, 'id')->where('status', 'active'),
-                ),
-            ],
+            'business_id' => $this->businessIdRules(),
         ];
 
         if (! $this->route('user')?->hasRole('super-admin')) {
@@ -58,5 +54,26 @@ class UpdateUserRequest extends FormRequest
         }
 
         return $rules;
+    }
+
+    /**
+     * @return array<int, mixed>
+     */
+    private function businessIdRules(): array
+    {
+        if ($businessId = BusinessUserScope::scopedBusinessId($this->user())) {
+            return ['required', 'integer', Rule::in([$businessId])];
+        }
+
+        return [
+            'nullable',
+            'integer',
+            Rule::when(
+                filled($this->input('business_id'))
+                    && (int) $this->input('business_id') === $this->route('user')?->business_id,
+                Rule::exists(Business::class, 'id'),
+                Rule::exists(Business::class, 'id')->where('status', 'active'),
+            ),
+        ];
     }
 }

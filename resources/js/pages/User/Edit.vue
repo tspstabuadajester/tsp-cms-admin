@@ -18,6 +18,7 @@ const props = defineProps<{
     businesses: BusinessOption[];
     roles: RoleOption[];
     roleEditable: boolean;
+    showBusinessField: boolean;
 }>();
 
 const formatRoleName = (name: string) =>
@@ -110,7 +111,7 @@ const submit = () => {
                     <InputError :message="form.errors.email" />
                 </div>
 
-                <div class="grid gap-2">
+                <div v-if="showBusinessField" class="grid gap-2">
                     <Label for="business_id">Business</Label>
                     <select id="business_id" v-model="form.business_id" :class="selectClass">
                         <option value="">No business</option>

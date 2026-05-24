@@ -7,6 +7,8 @@ use App\Http\Requests\User\UpdateUserRequest;
 use App\Models\Business;
 use App\Models\User;
 use App\Support\AssignableUserRoles;
+use App\Support\BusinessUserScope;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Support\Facades\Storage;
@@ -23,7 +25,7 @@ class UserController extends Controller
     public function index(): Response
     {
         return Inertia::render('User/Index', [
-            'users' => User::query()
+            'users' => $this->scopedUsersQuery()
                 ->orderBy('name')
                 ->get(['id', 'name', 'email', 'avatar', 'status', 'created_at']),
         ]);
@@ -37,6 +39,7 @@ class UserController extends Controller
         return Inertia::render('User/Create', [
             'businesses' => $this->businessesForSelect(),
             'roles' => AssignableUserRoles::forSelect(),
+            'showBusinessField' => ! $this->isBusinessScoped(),
         ]);
     }
 
@@ -52,7 +55,7 @@ class UserController extends Controller
             'email' => $validated['email'],
             'password' => $validated['password'],
             'avatar' => $this->generateAvatar($validated['name']),
-            'business_id' => $validated['business_id'] ?? null,
+            'business_id' => $this->resolveBusinessId($validated['business_id'] ?? null),
         ]);
 
         $user->assignRole($validated['role']);
@@ -68,6 +71,8 @@ class UserController extends Controller
      */
     public function edit(User $user): Response
     {
+        $this->ensureUserInScope($user);
+
         $isSuperAdmin = $user->hasRole('super-admin');
 
         return Inertia::render('User/Edit', [
@@ -78,6 +83,7 @@ class UserController extends Controller
             'businesses' => $this->businessesForSelect($user->business_id),
             'roles' => AssignableUserRoles::forSelect(),
             'roleEditable' => ! $isSuperAdmin,
+            'showBusinessField' => ! $this->isBusinessScoped(),
         ]);
     }
 
@@ -86,6 +92,8 @@ class UserController extends Controller
      */
     public function update(UpdateUserRequest $request, User $user): RedirectResponse
     {
+        $this->ensureUserInScope($user);
+
         $validated = $request->validated();
         $nameChanged = $validated['name'] !== $user->name;
 
@@ -93,7 +101,7 @@ class UserController extends Controller
             'name' => $validated['name'],
             'email' => $validated['email'],
             'status' => $validated['status'],
-            'business_id' => $validated['business_id'] ?? null,
+            'business_id' => $this->resolveBusinessId($validated['business_id'] ?? null),
         ]);
 
         if ($user->isDirty('email')) {
@@ -121,12 +129,49 @@ class UserController extends Controller
     }
 
     /**
+     * @return Builder<User>
+     */
+    private function scopedUsersQuery(): Builder
+    {
+        return User::query()->forBusiness($this->authBusinessId());
+    }
+
+    private function isBusinessScoped(): bool
+    {
+        return BusinessUserScope::isScoped(auth()->user());
+    }
+
+    private function authBusinessId(): ?int
+    {
+        return BusinessUserScope::scopedBusinessId(auth()->user());
+    }
+
+    private function ensureUserInScope(User $user): void
+    {
+        abort_unless(
+            BusinessUserScope::userBelongsToScope($user, auth()->user()),
+            403,
+        );
+    }
+
+    private function resolveBusinessId(?int $businessId): ?int
+    {
+        return $this->authBusinessId() ?? $businessId;
+    }
+
+    /**
      * Active businesses for select dropdowns; includes the user's current business when inactive.
      *
      * @return Collection<int, Business>
      */
     private function businessesForSelect(?int $includeBusinessId = null)
     {
+        if ($this->isBusinessScoped()) {
+            return Business::query()
+                ->where('id', $this->authBusinessId())
+                ->get(['id', 'name']);
+        }
+
         return Business::query()
             ->where(function ($query) use ($includeBusinessId) {
                 $query->where('status', 'active');
