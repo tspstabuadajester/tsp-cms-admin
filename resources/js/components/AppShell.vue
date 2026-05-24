@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import FlashToast from '@/components/FlashToast.vue';
 import { SidebarProvider } from '@/components/ui/sidebar';
 import { onMounted, ref } from 'vue';
 
@@ -27,4 +28,5 @@ const handleSidebarChange = (open: boolean) => {
     <SidebarProvider v-else :default-open="isOpen" :open="isOpen" @update:open="handleSidebarChange">
         <slot />
     </SidebarProvider>
+    <FlashToast />
 </template>

@@ -17,10 +17,20 @@ export interface NavItem {
     isActive?: boolean;
 }
 
+export type ToastVariant = 'success' | 'warning' | 'error' | 'info';
+
+export interface FlashToast {
+    message: string;
+    variant: ToastVariant;
+}
+
 export interface SharedData {
     name: string;
     quote: { message: string; author: string };
     auth: Auth;
+    flash?: {
+        toast?: FlashToast | null;
+    };
     ziggy: {
         location: string;
         url: string;

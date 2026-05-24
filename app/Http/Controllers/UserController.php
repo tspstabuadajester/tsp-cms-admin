@@ -48,7 +48,10 @@ class UserController extends Controller
             'avatar' => $this->generateAvatar($validated['name']),
         ]);
 
-        return to_route('user');
+        return to_route('user')->with('toast', [
+            'message' => 'User created successfully.',
+            'variant' => 'success',
+        ]);
     }
 
     /**
@@ -89,7 +92,10 @@ class UserController extends Controller
 
         $user->save();
 
-        return to_route('user');
+        return to_route('user')->with('toast', [
+            'message' => 'User updated successfully.',
+            'variant' => 'success',
+        ]);
     }
 
     /**
