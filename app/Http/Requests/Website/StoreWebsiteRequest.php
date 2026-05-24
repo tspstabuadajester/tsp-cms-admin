@@ -36,10 +36,17 @@ class StoreWebsiteRequest extends FormRequest
     {
         return [
             'name' => ['required', 'string', 'max:255'],
-            'slug' => ['required', 'string', 'max:255', Rule::unique(Website::class)],
+            'slug' => [
+                'required',
+                'string',
+                'max:255',
+                'regex:/^[a-z0-9]+(?:-[a-z0-9]+)*$/',
+                Rule::unique(Website::class),
+            ],
             'primary_domain' => ['nullable', 'string', 'max:255', Rule::unique(Website::class)],
             'business_id' => $this->businessIdRules(),
             'status' => ['required', Rule::in(['active', 'inactive'])],
+            'logo' => ['nullable', 'image', 'max:2048'],
         ];
     }
 

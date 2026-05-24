@@ -20,6 +20,7 @@ return new class extends Migration
             $table->foreignId('business_id')->nullable()->constrained('businesses');
             $table->enum('status', ['active', 'inactive'])->default('active');
             $table->json('seo_defaults')->nullable();
+            $table->string('logo')->nullable();
             $table->json('settings')->nullable();
             $table->timestamp('published_at')->nullable();
             $table->timestamps();

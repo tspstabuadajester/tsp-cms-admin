@@ -68,6 +68,7 @@ export interface Website {
     primary_domain: string | null;
     business_id: number | null;
     status: 'active' | 'inactive';
+    logo?: string | null;
     seo_defaults: Record<string, unknown> | null;
     settings: Record<string, unknown> | null;
     published_at: string | null;
