@@ -1,13 +1,18 @@
 <script setup lang="ts">
 import HeadingSmall from '@/components/HeadingSmall.vue';
+import { Button } from '@/components/ui/button';
+import { usePermissions } from '@/composables/usePermissions';
 import AppLayout from '@/layouts/AppLayout.vue';
 import SettingsLayout from '@/layouts/settings/Layout.vue';
 import { type BreadcrumbItem, type Business } from '@/types';
-import { Head } from '@inertiajs/vue3';
+import { Head, Link } from '@inertiajs/vue3';
+import { Plus } from 'lucide-vue-next';
 
 defineProps<{
     businesses: Business[];
 }>();
+
+const { can } = usePermissions();
 
 const breadcrumbs: BreadcrumbItem[] = [
     {
@@ -31,7 +36,15 @@ const formatDate = (date: string) => {
     <AppLayout :breadcrumbs="breadcrumbs">
         <SettingsLayout full-width>
             <div class="flex flex-col gap-4">
-                <HeadingSmall title="Businesses" description="Manage all businesses in the system" />
+                <div class="flex items-center justify-between gap-4">
+                    <HeadingSmall title="Businesses" description="Manage all businesses in the system" />
+                    <Button v-if="can('business.manage')" as-child>
+                        <Link :href="route('business.create')">
+                            <Plus class="size-4" />
+                            Add New Business
+                        </Link>
+                    </Button>
+                </div>
 
                 <div class="overflow-hidden rounded-lg border">
                     <table class="w-full caption-bottom text-sm">

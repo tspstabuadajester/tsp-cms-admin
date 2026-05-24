@@ -30,6 +30,8 @@ Route::middleware(['auth', 'verified'])->group(function () {
 
     Route::prefix('business')->middleware('permission:business.manage')->group(function () {
         Route::get('/', [BusinessController::class, 'index'])->name('business');
+        Route::get('/create', [BusinessController::class, 'create'])->name('business.create');
+        Route::post('/', [BusinessController::class, 'store'])->name('business.store');
     });
 });
 
