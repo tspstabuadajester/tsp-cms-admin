@@ -29,6 +29,32 @@ class WebsiteFileContentController extends Controller
     }
 
     /**
+     * Show the JSON file editor for a template file.
+     */
+    public function editJson(Website $website, string $path): Response
+    {
+        $this->ensureWebsiteInScope($website);
+
+        abort_unless($website->template_path, 404);
+
+        $filePath = $this->resolveTemplateFilePath($website->template_path, $path);
+
+        abort_unless(
+            $filePath !== null && strtolower(pathinfo($filePath, PATHINFO_EXTENSION)) === 'json',
+            404,
+        );
+
+        return Inertia::render('Websites/FileContent/JsonEditor', [
+            'website' => $website->only(['id', 'name', 'slug']),
+            'file' => [
+                'path' => $filePath,
+                'name' => ltrim(Str::after($filePath, $website->template_path), '/'),
+            ],
+            'can_preview' => $this->hasIndexPage($website->template_path),
+        ]);
+    }
+
+    /**
      * Preview the website index.html in the browser.
      */
     public function preview(Website $website): HttpResponse

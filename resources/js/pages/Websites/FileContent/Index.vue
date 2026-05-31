@@ -5,7 +5,7 @@ import { Card, CardHeader, CardTitle } from '@/components/ui/card';
 import AppLayout from '@/layouts/AppLayout.vue';
 import { type BreadcrumbItem, type Website, type WebsiteTemplateItem, type WebsiteTemplateItemType } from '@/types';
 import { Head, Link } from '@inertiajs/vue3';
-import { ArrowLeft, Braces, ExternalLink, FileCode, FileJson, FileText, Folder, type LucideIcon } from 'lucide-vue-next';
+import { ArrowLeft, Braces, ExternalLink, FileCode, FileJson, FileText, Folder, Pencil, type LucideIcon } from 'lucide-vue-next';
 import { computed } from 'vue';
 
 const props = defineProps<{
@@ -90,7 +90,7 @@ const groupedItems = computed(() =>
                     <div class="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
                         <Card v-for="item in group.items" :key="item.path">
                             <CardHeader class="pb-4">
-                                <div class="flex items-center gap-3">
+                                <div class="flex items-start gap-3">
                                     <div
                                         class="flex size-10 shrink-0 items-center justify-center rounded-lg border bg-muted"
                                     >
@@ -99,10 +99,24 @@ const groupedItems = computed(() =>
                                             class="size-5 text-muted-foreground"
                                         />
                                     </div>
-                                    <div class="min-w-0 space-y-1">
+                                    <div class="min-w-0 flex-1 space-y-1">
                                         <CardTitle class="line-clamp-2 text-sm font-medium">{{ item.name }}</CardTitle>
                                         <p class="text-xs text-muted-foreground">{{ itemMeta[item.type].label }}</p>
                                     </div>
+                                    <Button
+                                        v-if="item.type === 'json'"
+                                        variant="ghost"
+                                        size="icon"
+                                        class="shrink-0 text-muted-foreground hover:text-foreground"
+                                        as-child
+                                    >
+                                        <Link
+                                            :href="route('websites.files.json', { website: website.id, path: item.name })"
+                                            :title="`Edit ${item.name}`"
+                                        >
+                                            <Pencil class="size-4" />
+                                        </Link>
+                                    </Button>
                                 </div>
                             </CardHeader>
                         </Card>

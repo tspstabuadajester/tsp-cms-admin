@@ -96,6 +96,41 @@ class WebsiteFileContentTest extends TestCase
             );
     }
 
+    public function test_authenticated_users_can_open_json_editor(): void
+    {
+        $manager = $this->createWebsiteManager(['business_id' => null]);
+        $website = Website::factory()->create([
+            'name' => 'Example Site',
+            'template_path' => 'sites/example-site',
+        ]);
+
+        Storage::disk('local')->put('sites/example-site/content.json', '{"title":"Home"}');
+
+        $this->actingAs($manager)
+            ->get(route('websites.files.json', ['website' => $website, 'path' => 'content.json']))
+            ->assertOk()
+            ->assertInertia(fn ($page) => $page
+                ->component('Websites/FileContent/JsonEditor')
+                ->where('website.name', 'Example Site')
+                ->where('file.name', 'content.json')
+                ->where('can_preview', false)
+            );
+    }
+
+    public function test_json_editor_returns_not_found_for_non_json_files(): void
+    {
+        $manager = $this->createWebsiteManager(['business_id' => null]);
+        $website = Website::factory()->create([
+            'template_path' => 'sites/example-site',
+        ]);
+
+        Storage::disk('local')->put('sites/example-site/style.css', 'body {}');
+
+        $this->actingAs($manager)
+            ->get(route('websites.files.json', ['website' => $website, 'path' => 'style.css']))
+            ->assertNotFound();
+    }
+
     public function test_authenticated_users_can_preview_index_html(): void
     {
         $manager = $this->createWebsiteManager(['business_id' => null]);
