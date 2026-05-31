@@ -9,7 +9,7 @@ import { usePermissions } from '@/composables/usePermissions';
 import AppLayout from '@/layouts/AppLayout.vue';
 import { type BreadcrumbItem, type Paginated, type WebsiteListItem } from '@/types';
 import { Head, Link } from '@inertiajs/vue3';
-import { Eye, Globe, Monitor, Pencil, Plus } from 'lucide-vue-next';
+import { Eye, Folder, Globe, Pencil, Plus } from 'lucide-vue-next';
 
 defineProps<{
     websites: Paginated<WebsiteListItem>;
@@ -98,16 +98,6 @@ const domainUrl = (domain: string): string => {
                                 <span class="truncate">{{ website.primary_domain }}</span>
                             </a>
                         </CardDescription>
-                        <p
-                            v-if="!website.has_layout"
-                            class="pt-1 text-sm text-amber-600 dark:text-amber-500"
-                        >
-                            No layout found, please contact your web designer
-                        </p>
-                        <Button v-else variant="outline" size="sm" type="button" class="w-fit">
-                            <Monitor class="size-4" />
-                            Preview
-                        </Button>
                         <div v-if="can('websites.manage')" class="flex gap-2 pt-2">
                             <Button variant="outline" size="sm" as-child>
                                 <Link :href="route('websites.show', website.id)">
@@ -122,6 +112,16 @@ const domainUrl = (domain: string): string => {
                                 </Link>
                             </Button>
                         </div>
+                        <p
+                            v-if="!website.has_layout"
+                            class="pt-2 text-sm text-amber-600 dark:text-amber-500"
+                        >
+                            No layout found, please contact your web designer
+                        </p>
+                        <Button v-else variant="outline" size="sm" type="button" class="mt-2 w-full">
+                            <Folder class="size-4" />
+                            File Manager
+                        </Button>
                     </CardHeader>
                 </Card>
             </div>
