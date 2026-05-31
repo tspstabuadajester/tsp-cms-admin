@@ -35,6 +35,14 @@ const logoUrl = (filename?: string | null): string | undefined => {
 
     return `/storage/logos/${filename}`;
 };
+
+const domainUrl = (domain: string): string => {
+    if (domain.startsWith('http://') || domain.startsWith('https://')) {
+        return domain;
+    }
+
+    return `https://${domain}`;
+};
 </script>
 
 <template>
@@ -79,8 +87,16 @@ const logoUrl = (filename?: string | null): string | undefined => {
                                 {{ formatUserStatus(website.status) }}
                             </StatusBadge>
                         </div>
-                        <CardDescription v-if="website.primary_domain" class="line-clamp-1">
-                            {{ website.primary_domain }}
+                        <CardDescription v-if="website.primary_domain" class="min-w-0">
+                            <a
+                                :href="domainUrl(website.primary_domain)"
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                class="flex items-center gap-1.5 min-w-0 hover:underline"
+                            >
+                                <Globe class="size-3.5 shrink-0" />
+                                <span class="truncate">{{ website.primary_domain }}</span>
+                            </a>
                         </CardDescription>
                         <div v-if="can('websites.manage')" class="flex gap-2 pt-2">
                             <Button variant="outline" size="sm" as-child>
