@@ -8,6 +8,7 @@ use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use Inertia\Inertia;
 use Inertia\Response;
+use Symfony\Component\HttpFoundation\Response as BaseResponse;
 
 class WebsiteFileContentController extends Controller
 {
@@ -40,11 +41,30 @@ class WebsiteFileContentController extends Controller
 
         abort_unless(Storage::disk('local')->exists($indexPath), 404);
 
+        $html = Storage::disk('local')->get($indexPath);
+        $baseHref = route('websites.preview', $website).'/';
+
         return response(
-            Storage::disk('local')->get($indexPath),
+            $this->injectPreviewBaseTag($html, $baseHref),
             200,
             ['Content-Type' => 'text/html; charset=UTF-8'],
         );
+    }
+
+    /**
+     * Serve a template asset for website preview.
+     */
+    public function previewAsset(Website $website, string $path): BaseResponse
+    {
+        $this->ensureWebsiteInScope($website);
+
+        abort_unless($website->template_path, 404);
+
+        $filePath = $this->resolveTemplateFilePath($website->template_path, $path);
+
+        abort_unless($filePath !== null, 404);
+
+        return Storage::disk('local')->response($filePath);
     }
 
     /**
@@ -112,6 +132,49 @@ class WebsiteFileContentController extends Controller
     private function hasIndexPage(string $templatePath): bool
     {
         return Storage::disk('local')->exists("{$templatePath}/index.html");
+    }
+
+    private function injectPreviewBaseTag(string $html, string $baseHref): string
+    {
+        $baseTag = '<base href="'.e($baseHref).'">';
+
+        if (preg_match('/<head[^>]*>/i', $html, $matches, PREG_OFFSET_CAPTURE)) {
+            $position = $matches[0][1] + strlen($matches[0][0]);
+
+            return substr_replace($html, $baseTag, $position, 0);
+        }
+
+        if (preg_match('/<html[^>]*>/i', $html, $matches, PREG_OFFSET_CAPTURE)) {
+            $position = $matches[0][1] + strlen($matches[0][0]);
+
+            return substr_replace($html, '<head>'.$baseTag.'</head>', $position, 0);
+        }
+
+        return $baseTag.$html;
+    }
+
+    private function resolveTemplateFilePath(string $templatePath, string $relativePath): ?string
+    {
+        $relativePath = ltrim(str_replace('\\', '/', $relativePath), '/');
+
+        if ($relativePath === '' || Str::contains($relativePath, ['..', "\0"])) {
+            return null;
+        }
+
+        $filePath = "{$templatePath}/{$relativePath}";
+
+        if (! Storage::disk('local')->exists($filePath) || Storage::disk('local')->directoryExists($filePath)) {
+            return null;
+        }
+
+        $templateRoot = realpath(Storage::disk('local')->path($templatePath));
+        $resolvedFile = realpath(Storage::disk('local')->path($filePath));
+
+        if ($templateRoot === false || $resolvedFile === false || ! str_starts_with($resolvedFile, $templateRoot)) {
+            return null;
+        }
+
+        return $filePath;
     }
 
     private function ensureWebsiteInScope(Website $website): void

@@ -42,6 +42,8 @@ class WebsiteFileContentTest extends TestCase
 
         $this->get(route('websites.files', $website))->assertRedirect(route('login'));
         $this->get(route('websites.preview', $website))->assertRedirect(route('login'));
+        $this->get(route('websites.preview.asset', ['website' => $website, 'path' => 'assets/style.css']))
+            ->assertRedirect(route('login'));
     }
 
     public function test_users_without_permission_cannot_access_website_file_content(): void
@@ -101,13 +103,45 @@ class WebsiteFileContentTest extends TestCase
             'template_path' => 'sites/example-site',
         ]);
 
-        Storage::disk('local')->put('sites/example-site/index.html', '<html><body>Hello</body></html>');
+        Storage::disk('local')->put('sites/example-site/index.html', '<html><head></head><body>Hello</body></html>');
 
         $this->actingAs($manager)
             ->get(route('websites.preview', $website))
             ->assertOk()
             ->assertHeader('Content-Type', 'text/html; charset=UTF-8')
-            ->assertSee('Hello', false);
+            ->assertSee('Hello', false)
+            ->assertSee('<base href="'.route('websites.preview', $website).'/"', false);
+    }
+
+    public function test_authenticated_users_can_load_preview_assets(): void
+    {
+        $manager = $this->createWebsiteManager(['business_id' => null]);
+        $website = Website::factory()->create([
+            'template_path' => 'sites/example-site',
+        ]);
+
+        Storage::disk('local')->put('sites/example-site/assets/style.css', 'body { color: red; }');
+
+        $response = $this->actingAs($manager)
+            ->get(route('websites.preview.asset', ['website' => $website, 'path' => 'assets/style.css']));
+
+        $response->assertOk();
+        $this->assertSame('body { color: red; }', $response->streamedContent());
+    }
+
+    public function test_preview_asset_route_blocks_path_traversal(): void
+    {
+        $manager = $this->createWebsiteManager(['business_id' => null]);
+        $website = Website::factory()->create([
+            'template_path' => 'sites/example-site',
+        ]);
+
+        Storage::disk('local')->put('sites/example-site/index.html', '<html></html>');
+        Storage::disk('local')->put('sites/secret.css', 'secret');
+
+        $this->actingAs($manager)
+            ->get(route('websites.preview.asset', ['website' => $website, 'path' => '../secret.css']))
+            ->assertNotFound();
     }
 
     public function test_preview_returns_not_found_when_index_html_is_missing(): void

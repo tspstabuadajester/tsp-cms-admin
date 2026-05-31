@@ -223,7 +223,7 @@ class WebsiteController extends Controller
         }
 
         return Storage::disk('local')->exists("{$templatePath}/index.html")
-            && Storage::disk('local')->exists("{$templatePath}/content.json");
+            && Storage::disk('local')->exists("{$templatePath}/index.json");
     }
 
     private function ensureSiteDirectory(string $path): bool
