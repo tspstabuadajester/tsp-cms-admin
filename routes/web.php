@@ -21,6 +21,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::post('/', [WebsiteController::class, 'store'])->name('websites.store');
         Route::get('/{website}', [WebsiteController::class, 'show'])->name('websites.show');
         Route::get('/{website}/files', [WebsiteFileContentController::class, 'index'])->name('websites.files');
+        Route::get('/{website}/preview', [WebsiteFileContentController::class, 'preview'])->name('websites.preview');
         Route::get('/{website}/edit', [WebsiteController::class, 'edit'])->name('websites.edit');
         Route::put('/{website}', [WebsiteController::class, 'update'])->name('websites.update');
     });

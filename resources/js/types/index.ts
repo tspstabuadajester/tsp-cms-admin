@@ -83,9 +83,12 @@ export type WebsiteListItem = Pick<
     has_layout: boolean;
 };
 
-export type WebsiteFilePage = {
+export type WebsiteTemplateItemType = 'folder' | 'html' | 'css' | 'javascript' | 'json';
+
+export type WebsiteTemplateItem = {
     path: string;
     name: string;
+    type: WebsiteTemplateItemType;
 };
 
 export interface Business {
