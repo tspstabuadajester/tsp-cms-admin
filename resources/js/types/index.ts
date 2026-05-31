@@ -92,13 +92,31 @@ export type WebsiteTemplateItem = {
 };
 
 export type WebsiteJsonField = {
+    key: string;
+    value: string;
+};
+
+export type WebsiteJsonScalarField = {
     path: string;
     value: string;
 };
 
+export type WebsiteJsonArrayItem = {
+    fields: WebsiteJsonField[];
+    hidden: WebsiteJsonField[];
+};
+
+export type WebsiteJsonArrayGroup = {
+    key: string;
+    template: WebsiteJsonField[];
+    template_hidden: WebsiteJsonField[];
+    items: WebsiteJsonArrayItem[];
+};
+
 export type WebsiteJsonSection = {
     key: string;
-    fields: WebsiteJsonField[];
+    fields: WebsiteJsonScalarField[];
+    arrays: WebsiteJsonArrayGroup[];
 };
 
 export interface Business {

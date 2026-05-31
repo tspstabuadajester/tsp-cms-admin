@@ -21,7 +21,7 @@ class UpdateWebsiteJsonRequest extends FormRequest
         return [
             'sections' => ['required', 'array'],
             'sections.*.key' => ['required', 'string'],
-            'sections.*.fields' => ['required', 'array'],
+            'sections.*.fields' => ['present', 'array'],
             'sections.*.fields.*.path' => [
                 'required',
                 'string',
@@ -32,6 +32,15 @@ class UpdateWebsiteJsonRequest extends FormRequest
                 },
             ],
             'sections.*.fields.*.value' => ['present', 'string'],
+            'sections.*.arrays' => ['present', 'array'],
+            'sections.*.arrays.*.key' => ['required', 'string'],
+            'sections.*.arrays.*.items' => ['present', 'array'],
+            'sections.*.arrays.*.items.*.fields' => ['present', 'array'],
+            'sections.*.arrays.*.items.*.fields.*.key' => ['required', 'string'],
+            'sections.*.arrays.*.items.*.fields.*.value' => ['present', 'string'],
+            'sections.*.arrays.*.items.*.hidden' => ['present', 'array'],
+            'sections.*.arrays.*.items.*.hidden.*.key' => ['required', 'string'],
+            'sections.*.arrays.*.items.*.hidden.*.value' => ['present', 'string'],
         ];
     }
 }

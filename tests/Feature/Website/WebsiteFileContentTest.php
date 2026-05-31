@@ -114,6 +114,10 @@ class WebsiteFileContentTest extends TestCase
             'nav' => [
                 'ctaLabel' => 'Request Appointment',
                 'ctaHref' => '#appointment',
+                'links' => [
+                    ['label' => 'Home', 'href' => '#home'],
+                    ['label' => 'About', 'href' => '#about', 'suffix' => '▾'],
+                ],
             ],
         ], JSON_THROW_ON_ERROR));
 
@@ -131,11 +135,15 @@ class WebsiteFileContentTest extends TestCase
                 ->has('sections.0.fields', 3)
                 ->where('sections.0.fields.0.path', 'title')
                 ->where('sections.0.fields.0.value', 'Elevate Mental Health and Wellness')
-                ->where('sections.0.fields.1.path', 'brandName')
-                ->where('sections.0.fields.1.value', 'Elevate')
                 ->where('sections.1.key', 'nav')
                 ->where('sections.1.fields.0.path', 'ctaLabel')
-                ->where('sections.1.fields.0.value', 'Request Appointment')
+                ->has('sections.1.arrays', 1)
+                ->where('sections.1.arrays.0.key', 'links')
+                ->has('sections.1.arrays.0.items', 2)
+                ->where('sections.1.arrays.0.items.0.fields.0.key', 'label')
+                ->where('sections.1.arrays.0.items.0.fields.0.value', 'Home')
+                ->where('sections.1.arrays.0.items.1.fields.2.key', 'suffix')
+                ->where('sections.1.arrays.0.items.1.fields.2.value', '▾')
             );
     }
 
@@ -194,6 +202,121 @@ class WebsiteFileContentTest extends TestCase
             ->assertSessionHasErrors('file');
     }
 
+    public function test_authenticated_users_can_save_json_array_groups(): void
+    {
+        $manager = $this->createWebsiteManager(['business_id' => null]);
+        $website = Website::factory()->create([
+            'template_path' => 'sites/example-site',
+        ]);
+
+        Storage::disk('local')->put('sites/example-site/content.json', json_encode([
+            'nav' => [
+                'links' => [
+                    ['label' => 'Home', 'href' => '#home'],
+                ],
+            ],
+            'services' => [
+                'items' => [
+                    ['id' => 'adhd', 'title' => 'ADHD', 'detail' => 'Detail', 'icon' => 'star'],
+                ],
+            ],
+        ], JSON_THROW_ON_ERROR));
+
+        $this->actingAs($manager)
+            ->put(route('websites.files.json.update', ['website' => $website, 'path' => 'content.json']), [
+                'sections' => [
+                    [
+                        'key' => 'nav',
+                        'fields' => [],
+                        'arrays' => [
+                            [
+                                'key' => 'links',
+                                'items' => [
+                                    [
+                                        'fields' => [
+                                            ['key' => 'label', 'value' => 'Home'],
+                                            ['key' => 'href', 'value' => '#home'],
+                                        ],
+                                        'hidden' => [],
+                                    ],
+                                    [
+                                        'fields' => [
+                                            ['key' => 'label', 'value' => 'Contact'],
+                                            ['key' => 'href', 'value' => '#contact'],
+                                        ],
+                                        'hidden' => [],
+                                    ],
+                                ],
+                            ],
+                        ],
+                    ],
+                    [
+                        'key' => 'services',
+                        'fields' => [],
+                        'arrays' => [
+                            [
+                                'key' => 'items',
+                                'items' => [
+                                    [
+                                        'fields' => [
+                                            ['key' => 'title', 'value' => 'ADHD Updated'],
+                                            ['key' => 'detail', 'value' => 'Detail'],
+                                            ['key' => 'icon', 'value' => 'star'],
+                                        ],
+                                        'hidden' => [
+                                            ['key' => 'id', 'value' => 'adhd'],
+                                        ],
+                                    ],
+                                ],
+                            ],
+                        ],
+                    ],
+                ],
+            ])
+            ->assertRedirect(route('websites.files.json', ['website' => $website, 'path' => 'content.json']));
+
+        $saved = json_decode(Storage::disk('local')->get('sites/example-site/content.json'), true);
+
+        $this->assertCount(2, $saved['nav']['links']);
+        $this->assertSame('Contact', $saved['nav']['links'][1]['label']);
+        $this->assertSame('adhd', $saved['services']['items'][0]['id']);
+        $this->assertSame('ADHD Updated', $saved['services']['items'][0]['title']);
+    }
+
+    public function test_json_save_rejects_invalid_field_paths(): void
+    {
+        $manager = $this->createWebsiteManager(['business_id' => null]);
+        $website = Website::factory()->create([
+            'template_path' => 'sites/example-site',
+        ]);
+
+        Storage::disk('local')->put('sites/example-site/content.json', json_encode([
+            'site' => [
+                'title' => 'Old Title',
+            ],
+        ], JSON_THROW_ON_ERROR));
+
+        $this->actingAs($manager)
+            ->from(route('websites.files.json', ['website' => $website, 'path' => 'content.json']))
+            ->put(route('websites.files.json.update', ['website' => $website, 'path' => 'content.json']), [
+                'sections' => [
+                    [
+                        'key' => 'site',
+                        'fields' => [
+                            ['path' => '../etc/passwd', 'value' => 'Hacked'],
+                        ],
+                        'arrays' => [],
+                    ],
+                ],
+            ])
+            ->assertRedirect(route('websites.files.json', ['website' => $website, 'path' => 'content.json']))
+            ->assertSessionHasErrors('sections.0.fields.0.path');
+
+        $saved = json_decode(Storage::disk('local')->get('sites/example-site/content.json'), true);
+
+        $this->assertSame('Old Title', $saved['site']['title']);
+    }
+
     public function test_authenticated_users_can_save_json_file_changes(): void
     {
         $manager = $this->createWebsiteManager(['business_id' => null]);
@@ -220,6 +343,7 @@ class WebsiteFileContentTest extends TestCase
                             ['path' => 'enabled', 'value' => 'false'],
                             ['path' => 'count', 'value' => '9'],
                         ],
+                        'arrays' => [],
                     ],
                 ],
             ])

@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { Button } from '@/components/ui/button';
+import { collectSaveErrorMessages, hasSaveErrors } from '@/lib/json-form-errors';
 import FileContentJsonLayout from '@/layouts/websites/FileContentJsonLayout.vue';
 import JsonSectionFields from '@/pages/Websites/FileContent/JsonSectionFields.vue';
 import AppLayout from '@/layouts/AppLayout.vue';
@@ -20,26 +21,32 @@ const props = defineProps<{
     status?: string;
 }>();
 
+const cloneSection = (section: WebsiteJsonSection): WebsiteJsonSection => ({
+    key: section.key,
+    fields: section.fields.map((field) => ({ ...field })),
+    arrays: section.arrays.map((arrayGroup) => ({
+        key: arrayGroup.key,
+        template: arrayGroup.template.map((field) => ({ ...field })),
+        template_hidden: arrayGroup.template_hidden.map((field) => ({ ...field })),
+        items: arrayGroup.items.map((item) => ({
+            fields: item.fields.map((field) => ({ ...field })),
+            hidden: item.hidden.map((field) => ({ ...field })),
+        })),
+    })),
+});
+
 const form = useForm({
     sections: [] as WebsiteJsonSection[],
 });
 
-const editableSections = ref<WebsiteJsonSection[]>(
-    props.sections.map((section) => ({
-        key: section.key,
-        fields: section.fields.map((field) => ({ ...field })),
-    })),
-);
+const editableSections = ref<WebsiteJsonSection[]>(props.sections.map(cloneSection));
 
 const activeSectionKey = ref(props.sections[0]?.key ?? '');
 
 watch(
     () => props.sections,
     (sections) => {
-        editableSections.value = sections.map((section) => ({
-            key: section.key,
-            fields: section.fields.map((field) => ({ ...field })),
-        }));
+        editableSections.value = sections.map(cloneSection);
 
         if (!editableSections.value.some((section) => section.key === activeSectionKey.value)) {
             activeSectionKey.value = editableSections.value[0]?.key ?? '';
@@ -58,7 +65,18 @@ const activeSectionIndex = computed(() =>
     editableSections.value.findIndex((section) => section.key === activeSectionKey.value),
 );
 
-const hasFields = computed(() => editableSections.value.some((section) => section.fields.length > 0));
+const sectionHasContent = (section: WebsiteJsonSection): boolean =>
+    section.fields.length > 0 || section.arrays.some((arrayGroup) => arrayGroup.items.length > 0);
+
+const hasFields = computed(() => editableSections.value.some(sectionHasContent));
+
+const saveErrorMessages = computed(() => collectSaveErrorMessages(form.errors));
+
+const clearFieldError = (field?: string): void => {
+    if (field) {
+        (form.clearErrors as (name: string) => void)(field);
+    }
+};
 
 const save = () => {
     form.sections = editableSections.value.map((section) => ({
@@ -67,10 +85,24 @@ const save = () => {
             path: field.path,
             value: field.value,
         })),
+        arrays: section.arrays.map((arrayGroup) => ({
+            key: arrayGroup.key,
+            items: arrayGroup.items.map((item) => ({
+                fields: item.fields.map((field) => ({
+                    key: field.key,
+                    value: field.value,
+                })),
+                hidden: item.hidden.map((field) => ({
+                    key: field.key,
+                    value: field.value,
+                })),
+            })),
+        })),
     }));
 
     form.put(route('websites.files.json.update', { website: props.website.id, path: props.file.name }), {
         preserveScroll: true,
+        onSuccess: () => form.clearErrors(),
     });
 };
 
@@ -134,6 +166,16 @@ const breadcrumbs: BreadcrumbItem[] = [
             </div>
 
             <div
+                v-if="hasSaveErrors(form.errors)"
+                class="rounded-lg border border-destructive/30 bg-destructive/5 p-4 text-sm text-destructive"
+            >
+                <p class="font-medium">Could not save changes. Please fix the errors below.</p>
+                <ul v-if="saveErrorMessages.length > 0" class="mt-2 list-inside list-disc space-y-1">
+                    <li v-for="message in saveErrorMessages" :key="message">{{ message }}</li>
+                </ul>
+            </div>
+
+            <div
                 v-if="json_error"
                 class="rounded-lg border border-destructive/30 bg-destructive/5 p-4 text-sm text-destructive"
             >
@@ -156,9 +198,12 @@ const breadcrumbs: BreadcrumbItem[] = [
             >
                 <JsonSectionFields
                     v-if="activeSectionIndex >= 0"
-                    v-model:fields="editableSections[activeSectionIndex].fields"
+                    v-model:section="editableSections[activeSectionIndex]"
                     :section-key="editableSections[activeSectionIndex].key"
+                    :section-index="activeSectionIndex"
                     :website-id="website.id"
+                    :errors="form.errors"
+                    :clear-errors="clearFieldError"
                 />
             </FileContentJsonLayout>
         </div>

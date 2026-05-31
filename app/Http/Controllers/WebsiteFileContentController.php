@@ -266,12 +266,12 @@ class WebsiteFileContentController extends Controller
                 continue;
             }
 
-            $fields = [];
-            $this->collectScalarFields('', $sectionValue, $fields);
+            $parsedSection = $this->parseSectionContent($sectionValue);
 
             $sections[] = [
                 'key' => (string) $sectionKey,
-                'fields' => $fields,
+                'fields' => $parsedSection['fields'],
+                'arrays' => $parsedSection['arrays'],
             ];
         }
 
@@ -291,6 +291,161 @@ class WebsiteFileContentController extends Controller
     private function isJsonObject(mixed $value): bool
     {
         return is_array($value) && ! array_is_list($value);
+    }
+
+    /**
+     * @return array{fields: list<array{path: string, value: string}>, arrays: list<array{key: string, template: list<array{key: string, value: string}>, template_hidden: list<array{key: string, value: string}>, items: list<array{fields: list<array{key: string, value: string}>, hidden: list<array{key: string, value: string}>}>}>}
+     */
+    private function parseSectionContent(array $sectionValue): array
+    {
+        $fields = [];
+        $arrays = [];
+
+        foreach ($sectionValue as $key => $value) {
+            if (is_array($value) && $this->isListOfObjects($value)) {
+                $arrays[] = $this->parseArrayGroup((string) $key, $value);
+
+                continue;
+            }
+
+            if (is_array($value)) {
+                $this->collectScalarFields((string) $key, $value, $fields);
+
+                continue;
+            }
+
+            if (is_scalar($value) || $value === null) {
+                $fields[] = [
+                    'path' => (string) $key,
+                    'value' => $this->jsonFieldValueToString($value),
+                ];
+            }
+        }
+
+        return [
+            'fields' => $fields,
+            'arrays' => $arrays,
+        ];
+    }
+
+    private function isListOfObjects(array $value): bool
+    {
+        if (! array_is_list($value)) {
+            return false;
+        }
+
+        if ($value === []) {
+            return true;
+        }
+
+        foreach ($value as $item) {
+            if (! is_array($item) || array_is_list($item)) {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
+    /**
+     * @param  list<array<string, mixed>>  $items
+     * @return array{key: string, template: list<array{key: string, value: string}>, template_hidden: list<array{key: string, value: string}>, items: list<array{fields: list<array{key: string, value: string}>, hidden: list<array{key: string, value: string}>}>}
+     */
+    private function parseArrayGroup(string $key, array $items): array
+    {
+        $templateKeys = [];
+        $templateHiddenKeys = [];
+        $parsedItems = [];
+
+        foreach ($items as $item) {
+            $itemFields = [];
+            $hiddenFields = [];
+
+            foreach ($item as $fieldKey => $fieldValue) {
+                if ((string) $fieldKey === 'id') {
+                    if (is_scalar($fieldValue) || $fieldValue === null) {
+                        $hiddenFields[] = [
+                            'key' => 'id',
+                            'value' => $this->jsonFieldValueToString($fieldValue),
+                        ];
+                        $templateHiddenKeys['id'] = true;
+                    }
+
+                    continue;
+                }
+
+                if (is_scalar($fieldValue) || $fieldValue === null) {
+                    $itemFields[] = [
+                        'key' => (string) $fieldKey,
+                        'value' => $this->jsonFieldValueToString($fieldValue),
+                    ];
+                    $templateKeys[(string) $fieldKey] = true;
+                }
+            }
+
+            $parsedItems[] = [
+                'fields' => $itemFields,
+                'hidden' => $hiddenFields,
+            ];
+        }
+
+        $template = $this->buildArrayFieldTemplate(array_keys($templateKeys));
+        $templateHidden = $this->buildArrayFieldTemplate(array_keys($templateHiddenKeys));
+
+        if ($parsedItems === []) {
+            if ($template === []) {
+                $template = $this->defaultArrayFieldTemplate($key);
+            }
+
+            if ($templateHidden === []) {
+                $templateHidden = $this->defaultArrayHiddenTemplate($key);
+            }
+        }
+
+        return [
+            'key' => $key,
+            'template' => $template,
+            'template_hidden' => $templateHidden,
+            'items' => $parsedItems,
+        ];
+    }
+
+    /**
+     * @return list<array{key: string, value: string}>
+     */
+    private function defaultArrayFieldTemplate(string $key): array
+    {
+        $fields = match ($key) {
+            'links', 'quickLinks' => ['label', 'href', 'suffix'],
+            'items' => ['title', 'detail', 'icon'],
+            'insurers' => ['name', 'className', 'html'],
+            'highlights' => [],
+            default => ['title'],
+        };
+
+        return $this->buildArrayFieldTemplate($fields);
+    }
+
+    /**
+     * @return list<array{key: string, value: string}>
+     */
+    private function defaultArrayHiddenTemplate(string $key): array
+    {
+        return $key === 'items'
+            ? $this->buildArrayFieldTemplate(['id'])
+            : [];
+    }
+
+    /**
+     * @param  list<string>  $keys
+     * @return list<array{key: string, value: string}>
+     */
+    private function buildArrayFieldTemplate(array $keys): array
+    {
+        return array_map(
+            fn (string $key) => ['key' => $key, 'value' => ''],
+            $keys,
+        );
     }
 
     /**
@@ -388,6 +543,44 @@ class WebsiteFileContentController extends Controller
                     $path,
                     $this->parseFieldValueFromString($field['value'], $originalValue),
                 );
+            }
+
+            foreach ($section['arrays'] ?? [] as $arrayGroup) {
+                $arrayKey = $arrayGroup['key'];
+                $originalItems = $original[$sectionKey][$arrayKey] ?? [];
+                $rebuiltItems = [];
+
+                foreach ($arrayGroup['items'] as $index => $item) {
+                    $originalItem = is_array($originalItems[$index] ?? null) ? $originalItems[$index] : [];
+                    $rebuiltItem = [];
+
+                    foreach ($item['hidden'] ?? [] as $hiddenField) {
+                        $rebuiltItem[$hiddenField['key']] = $this->parseFieldValueFromString(
+                            $hiddenField['value'],
+                            $originalItem[$hiddenField['key']] ?? null,
+                        );
+                    }
+
+                    foreach ($item['fields'] as $field) {
+                        $rebuiltItem[$field['key']] = $this->parseFieldValueFromString(
+                            $field['value'],
+                            $originalItem[$field['key']] ?? null,
+                        );
+                    }
+
+                    if (
+                        isset($rebuiltItem['id'])
+                        && ($rebuiltItem['id'] === '' || $rebuiltItem['id'] === null)
+                        && isset($rebuiltItem['title'])
+                        && is_string($rebuiltItem['title'])
+                    ) {
+                        $rebuiltItem['id'] = Str::slug($rebuiltItem['title']);
+                    }
+
+                    $rebuiltItems[] = $rebuiltItem;
+                }
+
+                $original[$sectionKey][$arrayKey] = $rebuiltItems;
             }
         }
 
