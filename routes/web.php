@@ -20,16 +20,23 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::get('/create', [WebsiteController::class, 'create'])->name('websites.create');
         Route::post('/', [WebsiteController::class, 'store'])->name('websites.store');
         Route::get('/{website}', [WebsiteController::class, 'show'])->name('websites.show');
-        Route::get('/{website}/files/json/{path}', [WebsiteFileContentController::class, 'editJson'])
-            ->where('path', '.*')
-            ->name('websites.files.json');
-        Route::get('/{website}/files', [WebsiteFileContentController::class, 'index'])->name('websites.files');
+        Route::get('/{website}/edit', [WebsiteController::class, 'edit'])->name('websites.edit');
+        Route::put('/{website}', [WebsiteController::class, 'update'])->name('websites.update');
+
+        Route::prefix('{website}/files')->group(function () {
+            Route::get('json/{path}', [WebsiteFileContentController::class, 'editJson'])
+                ->where('path', '.*')
+                ->name('websites.files.json');
+            Route::put('json/{path}', [WebsiteFileContentController::class, 'updateJson'])
+                ->where('path', '.*')
+                ->name('websites.files.json.update');
+            Route::get('/', [WebsiteFileContentController::class, 'index'])->name('websites.files');
+        });
+
         Route::get('/{website}/preview/{path}', [WebsiteFileContentController::class, 'previewAsset'])
             ->where('path', '.*')
             ->name('websites.preview.asset');
         Route::get('/{website}/preview', [WebsiteFileContentController::class, 'preview'])->name('websites.preview');
-        Route::get('/{website}/edit', [WebsiteController::class, 'edit'])->name('websites.edit');
-        Route::put('/{website}', [WebsiteController::class, 'update'])->name('websites.update');
     });
 
     Route::prefix('business')->middleware('permission:business.manage')->group(function () {

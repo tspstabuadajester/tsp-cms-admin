@@ -4,8 +4,8 @@ import FileContentJsonLayout from '@/layouts/websites/FileContentJsonLayout.vue'
 import JsonSectionFields from '@/pages/Websites/FileContent/JsonSectionFields.vue';
 import AppLayout from '@/layouts/AppLayout.vue';
 import { type BreadcrumbItem, type Website, type WebsiteJsonSection } from '@/types';
-import { Head, Link } from '@inertiajs/vue3';
-import { ArrowLeft, ExternalLink, Save } from 'lucide-vue-next';
+import { Head, Link, useForm } from '@inertiajs/vue3';
+import { ArrowLeft, ExternalLink, LoaderCircle, Save } from 'lucide-vue-next';
 import { computed, ref, watch } from 'vue';
 
 const props = defineProps<{
@@ -17,7 +17,12 @@ const props = defineProps<{
     sections: WebsiteJsonSection[];
     json_error: string | null;
     can_preview: boolean;
+    status?: string;
 }>();
+
+const form = useForm({
+    sections: [] as WebsiteJsonSection[],
+});
 
 const editableSections = ref<WebsiteJsonSection[]>(
     props.sections.map((section) => ({
@@ -55,6 +60,20 @@ const activeSectionIndex = computed(() =>
 
 const hasFields = computed(() => editableSections.value.some((section) => section.fields.length > 0));
 
+const save = () => {
+    form.sections = editableSections.value.map((section) => ({
+        key: section.key,
+        fields: section.fields.map((field) => ({
+            path: field.path,
+            value: field.value,
+        })),
+    }));
+
+    form.put(route('websites.files.json.update', { website: props.website.id, path: props.file.name }), {
+        preserveScroll: true,
+    });
+};
+
 const breadcrumbs: BreadcrumbItem[] = [
     {
         title: 'Websites',
@@ -84,8 +103,14 @@ const breadcrumbs: BreadcrumbItem[] = [
                     </Link>
                 </Button>
                 <div class="flex flex-wrap items-center gap-2">
-                    <Button type="button" size="sm">
-                        <Save class="size-4" />
+                    <Button
+                        type="button"
+                        size="sm"
+                        :disabled="form.processing || !!json_error || !hasFields"
+                        @click="save"
+                    >
+                        <LoaderCircle v-if="form.processing" class="size-4 animate-spin" />
+                        <Save v-else class="size-4" />
                         Save Changes
                     </Button>
                     <Button v-if="can_preview" size="sm" variant="outline" as-child>
@@ -99,6 +124,13 @@ const breadcrumbs: BreadcrumbItem[] = [
                         </a>
                     </Button>
                 </div>
+            </div>
+
+            <div
+                v-if="status"
+                class="rounded-lg border border-green-200 bg-green-50 px-4 py-3 text-sm font-medium text-green-700"
+            >
+                {{ status }}
             </div>
 
             <div

@@ -2,7 +2,9 @@
 
 namespace App\Http\Controllers;
 
+use App\Http\Requests\Website\UpdateWebsiteJsonRequest;
 use App\Models\Website;
+use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Response as HttpResponse;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
@@ -55,7 +57,41 @@ class WebsiteFileContentController extends Controller
             'sections' => $parsed['sections'],
             'json_error' => $parsed['error'],
             'can_preview' => $this->hasIndexPage($website->template_path),
+            'status' => session('status'),
         ]);
+    }
+
+    /**
+     * Rebuild and save a template JSON file from edited sections.
+     */
+    public function updateJson(UpdateWebsiteJsonRequest $request, Website $website, string $path): RedirectResponse
+    {
+        $this->ensureWebsiteInScope($website);
+
+        abort_unless($website->template_path, 404);
+
+        $filePath = $this->resolveTemplateFilePath($website->template_path, $path);
+
+        abort_unless(
+            $filePath !== null && strtolower(pathinfo($filePath, PATHINFO_EXTENSION)) === 'json',
+            404,
+        );
+
+        $contents = Storage::disk('local')->get($filePath);
+        $decoded = json_decode($contents, true);
+
+        abort_unless(is_array($decoded) && ! array_is_list($decoded), 422);
+
+        $rebuilt = $this->rebuildJsonDocument($decoded, $request->validated('sections'));
+
+        Storage::disk('local')->put(
+            $filePath,
+            json_encode($rebuilt, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES)."\n",
+        );
+
+        return redirect()
+            ->route('websites.files.json', ['website' => $website, 'path' => $path])
+            ->with('status', 'JSON file saved successfully.');
     }
 
     /**
@@ -259,6 +295,71 @@ class WebsiteFileContentController extends Controller
         }
 
         return json_encode($value, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) ?: '';
+    }
+
+    /**
+     * @param  array<string, mixed>  $original
+     * @param  list<array{key: string, fields: list<array{path: string, value: string}>}>  $submittedSections
+     * @return array<string, mixed>
+     */
+    private function rebuildJsonDocument(array $original, array $submittedSections): array
+    {
+        foreach ($submittedSections as $section) {
+            $sectionKey = $section['key'];
+
+            if (! isset($original[$sectionKey]) || ! $this->isJsonObject($original[$sectionKey])) {
+                continue;
+            }
+
+            foreach ($section['fields'] as $field) {
+                $path = $field['path'];
+
+                if ($path === '') {
+                    continue;
+                }
+
+                $originalValue = data_get($original[$sectionKey], $path);
+
+                data_set(
+                    $original[$sectionKey],
+                    $path,
+                    $this->parseFieldValueFromString($field['value'], $originalValue),
+                );
+            }
+        }
+
+        return $original;
+    }
+
+    private function parseFieldValueFromString(string $value, mixed $original): mixed
+    {
+        if (is_bool($original)) {
+            return filter_var($value, FILTER_VALIDATE_BOOLEAN);
+        }
+
+        if (is_int($original)) {
+            return (int) $value;
+        }
+
+        if (is_float($original)) {
+            return (float) $value;
+        }
+
+        if ($original === null) {
+            return $value === '' ? null : $value;
+        }
+
+        if (is_array($original)) {
+            if ($value === '') {
+                return $original;
+            }
+
+            $decoded = json_decode($value, true);
+
+            return json_last_error() === JSON_ERROR_NONE ? $decoded : $original;
+        }
+
+        return $value;
     }
 
     private function injectPreviewBaseTag(string $html, string $baseHref): string

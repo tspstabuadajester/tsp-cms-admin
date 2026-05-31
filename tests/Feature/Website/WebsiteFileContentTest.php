@@ -138,6 +138,46 @@ class WebsiteFileContentTest extends TestCase
             );
     }
 
+    public function test_authenticated_users_can_save_json_file_changes(): void
+    {
+        $manager = $this->createWebsiteManager(['business_id' => null]);
+        $website = Website::factory()->create([
+            'template_path' => 'sites/example-site',
+        ]);
+
+        Storage::disk('local')->put('sites/example-site/content.json', json_encode([
+            'site' => [
+                'title' => 'Old Title',
+                'enabled' => true,
+                'count' => 3,
+            ],
+            'version' => '1.0.0',
+        ], JSON_THROW_ON_ERROR));
+
+        $this->actingAs($manager)
+            ->put(route('websites.files.json.update', ['website' => $website, 'path' => 'content.json']), [
+                'sections' => [
+                    [
+                        'key' => 'site',
+                        'fields' => [
+                            ['path' => 'title', 'value' => 'New Title'],
+                            ['path' => 'enabled', 'value' => 'false'],
+                            ['path' => 'count', 'value' => '9'],
+                        ],
+                    ],
+                ],
+            ])
+            ->assertRedirect(route('websites.files.json', ['website' => $website, 'path' => 'content.json']))
+            ->assertSessionHas('status');
+
+        $saved = json_decode(Storage::disk('local')->get('sites/example-site/content.json'), true);
+
+        $this->assertSame('New Title', $saved['site']['title']);
+        $this->assertFalse($saved['site']['enabled']);
+        $this->assertSame(9, $saved['site']['count']);
+        $this->assertSame('1.0.0', $saved['version']);
+    }
+
     public function test_json_editor_skips_scalar_top_level_sections_without_empty_paths(): void
     {
         $manager = $this->createWebsiteManager(['business_id' => null]);
