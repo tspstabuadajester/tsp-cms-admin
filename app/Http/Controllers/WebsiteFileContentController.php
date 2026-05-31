@@ -374,6 +374,21 @@ class WebsiteFileContentController extends Controller
                     continue;
                 }
 
+                if (is_array($fieldValue) && $this->isJsonObject($fieldValue)) {
+                    $nestedFields = [];
+                    $this->collectScalarFields((string) $fieldKey, $fieldValue, $nestedFields);
+
+                    foreach ($nestedFields as $nestedField) {
+                        $itemFields[] = [
+                            'key' => $nestedField['path'],
+                            'value' => $nestedField['value'],
+                        ];
+                        $templateKeys[$nestedField['path']] = true;
+                    }
+
+                    continue;
+                }
+
                 if (is_scalar($fieldValue) || $fieldValue === null) {
                     $itemFields[] = [
                         'key' => (string) $fieldKey,
@@ -562,9 +577,13 @@ class WebsiteFileContentController extends Controller
                     }
 
                     foreach ($item['fields'] as $field) {
-                        $rebuiltItem[$field['key']] = $this->parseFieldValueFromString(
-                            $field['value'],
-                            $originalItem[$field['key']] ?? null,
+                        data_set(
+                            $rebuiltItem,
+                            $field['key'],
+                            $this->parseFieldValueFromString(
+                                $field['value'],
+                                data_get($originalItem, $field['key']),
+                            ),
                         );
                     }
 

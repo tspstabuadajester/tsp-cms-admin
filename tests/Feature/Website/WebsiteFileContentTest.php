@@ -283,6 +283,95 @@ class WebsiteFileContentTest extends TestCase
         $this->assertSame('ADHD Updated', $saved['services']['items'][0]['title']);
     }
 
+    public function test_json_editor_exposes_nested_image_src_in_array_items(): void
+    {
+        $manager = $this->createWebsiteManager(['business_id' => null]);
+        $website = Website::factory()->create([
+            'template_path' => 'sites/example-site',
+        ]);
+
+        Storage::disk('local')->put('sites/example-site/content.json', json_encode([
+            'hero' => [
+                'slides' => [
+                    [
+                        'title' => 'Slide 1',
+                        'image' => [
+                            'src' => 'assets/hero.jpg',
+                            'alt' => 'Hero',
+                        ],
+                    ],
+                ],
+            ],
+        ], JSON_THROW_ON_ERROR));
+
+        $this->actingAs($manager)
+            ->get(route('websites.files.json', ['website' => $website, 'path' => 'content.json']))
+            ->assertOk()
+            ->assertInertia(fn ($page) => $page
+                ->component('Websites/FileContent/JsonEditor')
+                ->where('sections.0.key', 'hero')
+                ->where('sections.0.arrays.0.key', 'slides')
+                ->where('sections.0.arrays.0.items.0.fields.1.key', 'image.src')
+                ->where('sections.0.arrays.0.items.0.fields.1.value', 'assets/hero.jpg')
+                ->where('sections.0.arrays.0.items.0.fields.2.key', 'image.alt')
+                ->where('sections.0.arrays.0.items.0.fields.2.value', 'Hero')
+            );
+    }
+
+    public function test_authenticated_users_can_save_nested_image_src_in_array_items(): void
+    {
+        $manager = $this->createWebsiteManager(['business_id' => null]);
+        $website = Website::factory()->create([
+            'template_path' => 'sites/example-site',
+        ]);
+
+        Storage::disk('local')->put('sites/example-site/content.json', json_encode([
+            'hero' => [
+                'slides' => [
+                    [
+                        'title' => 'Slide 1',
+                        'image' => [
+                            'src' => 'assets/hero.jpg',
+                            'alt' => 'Hero',
+                        ],
+                    ],
+                ],
+            ],
+        ], JSON_THROW_ON_ERROR));
+
+        $this->actingAs($manager)
+            ->put(route('websites.files.json.update', ['website' => $website, 'path' => 'content.json']), [
+                'sections' => [
+                    [
+                        'key' => 'hero',
+                        'fields' => [],
+                        'arrays' => [
+                            [
+                                'key' => 'slides',
+                                'items' => [
+                                    [
+                                        'fields' => [
+                                            ['key' => 'title', 'value' => 'Slide 1'],
+                                            ['key' => 'image.src', 'value' => 'assets/hero-updated.jpg'],
+                                            ['key' => 'image.alt', 'value' => 'Hero updated'],
+                                        ],
+                                        'hidden' => [],
+                                    ],
+                                ],
+                            ],
+                        ],
+                    ],
+                ],
+            ])
+            ->assertRedirect(route('websites.files.json', ['website' => $website, 'path' => 'content.json']));
+
+        $saved = json_decode(Storage::disk('local')->get('sites/example-site/content.json'), true);
+
+        $this->assertSame('assets/hero-updated.jpg', $saved['hero']['slides'][0]['image']['src']);
+        $this->assertSame('Hero updated', $saved['hero']['slides'][0]['image']['alt']);
+        $this->assertSame('Slide 1', $saved['hero']['slides'][0]['title']);
+    }
+
     public function test_json_save_rejects_invalid_field_paths(): void
     {
         $manager = $this->createWebsiteManager(['business_id' => null]);
