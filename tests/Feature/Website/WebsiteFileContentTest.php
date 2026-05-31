@@ -372,6 +372,59 @@ class WebsiteFileContentTest extends TestCase
         $this->assertSame('Slide 1', $saved['hero']['slides'][0]['title']);
     }
 
+    public function test_json_save_returns_readable_validation_errors(): void
+    {
+        $manager = $this->createWebsiteManager(['business_id' => null]);
+        $website = Website::factory()->create([
+            'template_path' => 'sites/example-site',
+        ]);
+
+        Storage::disk('local')->put('sites/example-site/content.json', json_encode([
+            'nav' => [
+                'links' => [
+                    ['label' => 'Home', 'href' => '#home'],
+                ],
+            ],
+        ], JSON_THROW_ON_ERROR));
+
+        $response = $this->actingAs($manager)
+            ->from(route('websites.files.json', ['website' => $website, 'path' => 'content.json']))
+            ->put(route('websites.files.json.update', ['website' => $website, 'path' => 'content.json']), [
+                'sections' => [
+                    [
+                        'key' => 'nav',
+                        'fields' => [],
+                        'arrays' => [
+                            [
+                                'key' => 'links',
+                                'items' => [
+                                    [
+                                        'fields' => [
+                                            ['key' => 'label', 'value' => 123],
+                                            ['key' => 'href', 'value' => '#home'],
+                                        ],
+                                        'hidden' => [],
+                                    ],
+                                ],
+                            ],
+                        ],
+                    ],
+                ],
+            ]);
+
+        $response
+            ->assertRedirect(route('websites.files.json', ['website' => $website, 'path' => 'content.json']))
+            ->assertSessionHasErrors('sections.0.arrays.0.items.0.fields.0.value');
+
+        $message = session('errors')->first('sections.0.arrays.0.items.0.fields.0.value');
+
+        $this->assertStringNotContainsString('sections.0.arrays.0.items.0.fields.0.value', $message);
+        $this->assertStringContainsString('Nav', $message);
+        $this->assertStringContainsString('Links', $message);
+        $this->assertStringContainsString('Label', $message);
+        $this->assertStringContainsString('must be text', $message);
+    }
+
     public function test_json_save_rejects_invalid_field_paths(): void
     {
         $manager = $this->createWebsiteManager(['business_id' => null]);
@@ -400,6 +453,12 @@ class WebsiteFileContentTest extends TestCase
             ])
             ->assertRedirect(route('websites.files.json', ['website' => $website, 'path' => 'content.json']))
             ->assertSessionHasErrors('sections.0.fields.0.path');
+
+        $pathMessage = session('errors')->first('sections.0.fields.0.path');
+
+        $this->assertStringNotContainsString('sections.0.fields.0.path', $pathMessage);
+        $this->assertStringContainsString('Site', $pathMessage);
+        $this->assertStringContainsString('not allowed', $pathMessage);
 
         $saved = json_decode(Storage::disk('local')->get('sites/example-site/content.json'), true);
 
