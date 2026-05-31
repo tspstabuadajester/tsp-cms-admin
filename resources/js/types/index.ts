@@ -83,6 +83,11 @@ export type WebsiteListItem = Pick<
     has_layout: boolean;
 };
 
+export type WebsiteFilePage = {
+    path: string;
+    name: string;
+};
+
 export interface Business {
     id: number;
     uuid: string;

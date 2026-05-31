@@ -118,9 +118,11 @@ const domainUrl = (domain: string): string => {
                         >
                             No layout found, please contact your web designer
                         </p>
-                        <Button v-else variant="outline" size="sm" type="button" class="mt-2 w-full">
-                            <Folder class="size-4" />
-                            File Manager
+                        <Button v-else variant="outline" size="sm" as-child class="mt-2 w-full">
+                            <Link :href="route('websites.files', website.id)">
+                                <Folder class="size-4" />
+                                File Manager
+                            </Link>
                         </Button>
                     </CardHeader>
                 </Card>

@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\BusinessController;
 use App\Http\Controllers\WebsiteController;
+use App\Http\Controllers\WebsiteFileContentController;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
 
@@ -19,6 +20,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::get('/create', [WebsiteController::class, 'create'])->name('websites.create');
         Route::post('/', [WebsiteController::class, 'store'])->name('websites.store');
         Route::get('/{website}', [WebsiteController::class, 'show'])->name('websites.show');
+        Route::get('/{website}/files', [WebsiteFileContentController::class, 'index'])->name('websites.files');
         Route::get('/{website}/edit', [WebsiteController::class, 'edit'])->name('websites.edit');
         Route::put('/{website}', [WebsiteController::class, 'update'])->name('websites.update');
     });
