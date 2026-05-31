@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Support\BusinessUserScope;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -45,5 +46,16 @@ class Website extends Model
         }
 
         return $query->where('business_id', $businessId);
+    }
+
+    public function resolveRouteBinding($value, $field = null): ?self
+    {
+        $query = static::query()->where($field ?? $this->getRouteKeyName(), $value);
+
+        if (auth()->check()) {
+            $query->forBusiness(BusinessUserScope::scopedBusinessId(auth()->user()));
+        }
+
+        return $query->first();
     }
 }

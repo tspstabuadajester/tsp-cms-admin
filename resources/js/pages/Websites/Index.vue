@@ -9,7 +9,7 @@ import { usePermissions } from '@/composables/usePermissions';
 import AppLayout from '@/layouts/AppLayout.vue';
 import { type BreadcrumbItem, type Paginated, type Website } from '@/types';
 import { Head, Link } from '@inertiajs/vue3';
-import { Globe, Plus } from 'lucide-vue-next';
+import { Globe, Pencil, Plus } from 'lucide-vue-next';
 
 defineProps<{
     websites: Paginated<Website>;
@@ -82,6 +82,14 @@ const logoUrl = (filename?: string | null): string | undefined => {
                         <CardDescription v-if="website.primary_domain" class="line-clamp-1">
                             {{ website.primary_domain }}
                         </CardDescription>
+                        <div v-if="can('websites.manage')" class="pt-2">
+                            <Button variant="outline" size="sm" as-child>
+                                <Link :href="route('websites.edit', website.id)">
+                                    <Pencil class="size-4" />
+                                    Edit
+                                </Link>
+                            </Button>
+                        </div>
                     </CardHeader>
                 </Card>
             </div>

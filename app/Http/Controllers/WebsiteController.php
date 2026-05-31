@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Http\Requests\Website\StoreWebsiteRequest;
+use App\Http\Requests\Website\UpdateWebsiteRequest;
 use App\Models\Business;
 use App\Models\Website;
 use App\Support\BusinessUserScope;
@@ -81,6 +82,65 @@ class WebsiteController extends Controller
         ]);
     }
 
+    /**
+     * Show the form for editing the specified website.
+     */
+    public function edit(Website $website): Response
+    {
+        $this->ensureWebsiteInScope($website);
+
+        return Inertia::render('Websites/Edit', [
+            'website' => $website->only(['id', 'name', 'slug', 'primary_domain', 'logo', 'status', 'business_id']),
+            'businesses' => $this->businessesForSelect($website->business_id),
+            'showBusinessField' => ! BusinessUserScope::isScoped(auth()->user()),
+        ]);
+    }
+
+    /**
+     * Update the specified website.
+     */
+    public function update(UpdateWebsiteRequest $request, Website $website): RedirectResponse
+    {
+        $this->ensureWebsiteInScope($website);
+
+        $validated = $request->validated();
+        $logoFilename = null;
+        $previousLogo = $website->logo;
+
+        try {
+            DB::transaction(function () use ($request, $validated, $website, &$logoFilename): void {
+                $website->fill([
+                    'name' => $validated['name'],
+                    'slug' => $validated['slug'],
+                    'primary_domain' => $validated['primary_domain'] ?? null,
+                    'business_id' => $this->resolveBusinessId($validated['business_id'] ?? null),
+                    'status' => $validated['status'],
+                ]);
+
+                $logoFilename = $this->storeLogo($request->file('logo'));
+
+                if ($logoFilename !== null) {
+                    $website->logo = $logoFilename;
+                }
+
+                $website->save();
+            });
+        } catch (Throwable $exception) {
+            $this->deleteStoredLogo($logoFilename);
+
+            throw $exception;
+        }
+
+        if ($logoFilename !== null && $previousLogo !== null) {
+            $this->deleteStoredLogo($previousLogo);
+        }
+
+        return to_route('websites')->with('toast', [
+            'message' => 'Website updated successfully.',
+            'variant' => 'success',
+        ]);
+    }
+
     private function resolveBusinessId(?int $businessId): ?int
     {
         return BusinessUserScope::scopedBusinessId(auth()->user()) ?? $businessId;
@@ -97,6 +157,14 @@ class WebsiteController extends Controller
     private function authBusinessId(): ?int
     {
         return auth()->user()?->business_id;
+    }
+
+    private function ensureWebsiteInScope(Website $website): void
+    {
+        abort_unless(
+            $this->authBusinessId() === null || $website->business_id === $this->authBusinessId(),
+            403,
+        );
     }
 
     private function storeLogo(?UploadedFile $logo): ?string
@@ -129,7 +197,7 @@ class WebsiteController extends Controller
     /**
      * @return Collection<int, Business>
      */
-    private function businessesForSelect()
+    private function businessesForSelect(?int $includeBusinessId = null)
     {
         $scopedBusinessId = BusinessUserScope::scopedBusinessId(auth()->user());
 
@@ -140,7 +208,13 @@ class WebsiteController extends Controller
         }
 
         return Business::query()
-            ->where('status', 'active')
+            ->where(function ($query) use ($includeBusinessId) {
+                $query->where('status', 'active');
+
+                if ($includeBusinessId !== null) {
+                    $query->orWhere('id', $includeBusinessId);
+                }
+            })
             ->orderBy('name')
             ->get(['id', 'name']);
     }
