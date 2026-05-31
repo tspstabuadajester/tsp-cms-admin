@@ -116,6 +116,28 @@ class WebsiteTest extends TestCase
             ->assertInertia(fn ($page) => $page
                 ->component('Websites/Index')
                 ->has('websites.data', 3)
+                ->where('websites.data.0.has_layout', false)
+            );
+    }
+
+    public function test_website_index_marks_layout_present_when_template_files_exist(): void
+    {
+        $manager = $this->createSuperAdminWebsiteManager();
+        Website::factory()->create([
+            'name' => 'Layout Site',
+            'slug' => 'layout-site',
+            'template_path' => 'sites/layout-site',
+        ]);
+
+        Storage::disk('local')->put('sites/layout-site/index.html', '<html></html>');
+        Storage::disk('local')->put('sites/layout-site/content.json', '{}');
+
+        $this->actingAs($manager)
+            ->get(route('websites'))
+            ->assertOk()
+            ->assertInertia(fn ($page) => $page
+                ->where('websites.data.0.name', 'Layout Site')
+                ->where('websites.data.0.has_layout', true)
             );
     }
 

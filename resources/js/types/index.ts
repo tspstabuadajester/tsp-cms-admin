@@ -76,6 +76,13 @@ export interface Website {
     updated_at: string;
 }
 
+export type WebsiteListItem = Pick<
+    Website,
+    'id' | 'uuid' | 'name' | 'slug' | 'primary_domain' | 'logo' | 'status' | 'created_at'
+> & {
+    has_layout: boolean;
+};
+
 export interface Business {
     id: number;
     uuid: string;

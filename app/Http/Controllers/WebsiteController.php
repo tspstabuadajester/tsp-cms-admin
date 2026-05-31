@@ -26,11 +26,16 @@ class WebsiteController extends Controller
      */
     public function index(): Response
     {
+        $websites = $this->scopedWebsitesQuery()
+            ->orderBy('name')
+            ->paginate(12, ['id', 'uuid', 'name', 'slug', 'primary_domain', 'logo', 'status', 'template_path', 'created_at'])
+            ->withQueryString();
+
         return Inertia::render('Websites/Index', [
-            'websites' => $this->scopedWebsitesQuery()
-                ->orderBy('name')
-                ->paginate(12, ['id', 'uuid', 'name', 'slug', 'primary_domain', 'logo', 'status', 'created_at'])
-                ->withQueryString(),
+            'websites' => $websites->through(fn (Website $website) => array_merge(
+                $website->only(['id', 'uuid', 'name', 'slug', 'primary_domain', 'logo', 'status', 'created_at']),
+                ['has_layout' => $this->websiteHasLayout($website->template_path)],
+            )),
         ]);
     }
 
@@ -209,6 +214,16 @@ class WebsiteController extends Controller
     private function siteDirectoryPath(string $slug): string
     {
         return "sites/{$slug}";
+    }
+
+    private function websiteHasLayout(?string $templatePath): bool
+    {
+        if ($templatePath === null) {
+            return false;
+        }
+
+        return Storage::disk('local')->exists("{$templatePath}/index.html")
+            && Storage::disk('local')->exists("{$templatePath}/content.json");
     }
 
     private function ensureSiteDirectory(string $path): bool
