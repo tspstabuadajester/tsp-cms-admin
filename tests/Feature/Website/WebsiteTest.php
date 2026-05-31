@@ -74,6 +74,39 @@ class WebsiteTest extends TestCase
         $this->post(route('websites.store'), $this->validStorePayload())->assertForbidden();
     }
 
+    public function test_authenticated_users_can_view_website_index(): void
+    {
+        $manager = $this->createSuperAdminWebsiteManager();
+        Website::factory()->count(3)->create();
+
+        $this->actingAs($manager)
+            ->get(route('websites'))
+            ->assertOk()
+            ->assertInertia(fn ($page) => $page
+                ->component('Websites/Index')
+                ->has('websites.data', 3)
+            );
+    }
+
+    public function test_business_scoped_user_only_sees_their_business_websites_on_index(): void
+    {
+        $business = Business::factory()->create();
+        $otherBusiness = Business::factory()->create();
+        $scopedManager = $this->createScopedWebsiteManager($business);
+
+        Website::factory()->create(['business_id' => $business->id, 'name' => 'Own Site']);
+        Website::factory()->create(['business_id' => $otherBusiness->id, 'name' => 'Other Site']);
+
+        $this->actingAs($scopedManager)
+            ->get(route('websites'))
+            ->assertOk()
+            ->assertInertia(fn ($page) => $page
+                ->component('Websites/Index')
+                ->has('websites.data', 1)
+                ->where('websites.data.0.name', 'Own Site')
+            );
+    }
+
     public function test_super_admin_can_create_a_website_for_a_business(): void
     {
         $superAdmin = $this->createSuperAdminWebsiteManager();

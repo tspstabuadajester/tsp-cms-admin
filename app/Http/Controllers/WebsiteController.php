@@ -6,6 +6,7 @@ use App\Http\Requests\Website\StoreWebsiteRequest;
 use App\Models\Business;
 use App\Models\Website;
 use App\Support\BusinessUserScope;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\UploadedFile;
@@ -24,7 +25,12 @@ class WebsiteController extends Controller
      */
     public function index(): Response
     {
-        return Inertia::render('Websites/Index');
+        return Inertia::render('Websites/Index', [
+            'websites' => $this->scopedWebsitesQuery()
+                ->orderBy('name')
+                ->paginate(12, ['id', 'uuid', 'name', 'slug', 'primary_domain', 'logo', 'status', 'created_at'])
+                ->withQueryString(),
+        ]);
     }
 
     /**
@@ -78,6 +84,19 @@ class WebsiteController extends Controller
     private function resolveBusinessId(?int $businessId): ?int
     {
         return BusinessUserScope::scopedBusinessId(auth()->user()) ?? $businessId;
+    }
+
+    /**
+     * @return Builder<Website>
+     */
+    private function scopedWebsitesQuery(): Builder
+    {
+        return Website::query()->forBusiness($this->authBusinessId());
+    }
+
+    private function authBusinessId(): ?int
+    {
+        return auth()->user()?->business_id;
     }
 
     private function storeLogo(?UploadedFile $logo): ?string

@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -32,5 +33,17 @@ class Website extends Model
     public function business(): BelongsTo
     {
         return $this->belongsTo(Business::class);
+    }
+
+    /**
+     * Limit queries to a single business when the authenticated user belongs to one.
+     */
+    public function scopeForBusiness(Builder $query, ?int $businessId): Builder
+    {
+        if ($businessId === null) {
+            return $query;
+        }
+
+        return $query->where('business_id', $businessId);
     }
 }
