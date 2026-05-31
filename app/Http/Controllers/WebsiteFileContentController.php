@@ -44,12 +44,16 @@ class WebsiteFileContentController extends Controller
             404,
         );
 
+        $parsed = $this->parseJsonSections(Storage::disk('local')->get($filePath));
+
         return Inertia::render('Websites/FileContent/JsonEditor', [
             'website' => $website->only(['id', 'name', 'slug']),
             'file' => [
                 'path' => $filePath,
                 'name' => ltrim(Str::after($filePath, $website->template_path), '/'),
             ],
+            'sections' => $parsed['sections'],
+            'json_error' => $parsed['error'],
             'can_preview' => $this->hasIndexPage($website->template_path),
         ]);
     }
@@ -158,6 +162,103 @@ class WebsiteFileContentController extends Controller
     private function hasIndexPage(string $templatePath): bool
     {
         return Storage::disk('local')->exists("{$templatePath}/index.html");
+    }
+
+    /**
+     * @return array{sections: list<array{key: string, fields: list<array{path: string, value: string}>}>, error: string|null}
+     */
+    private function parseJsonSections(string $contents): array
+    {
+        $decoded = json_decode($contents, true);
+
+        if (json_last_error() !== JSON_ERROR_NONE) {
+            return [
+                'sections' => [],
+                'error' => 'This file contains invalid JSON and cannot be edited.',
+            ];
+        }
+
+        if (! is_array($decoded) || array_is_list($decoded)) {
+            return [
+                'sections' => [],
+                'error' => 'Only JSON objects with key-value pairs are supported.',
+            ];
+        }
+
+        $sections = [];
+        $invalidSectionKeys = [];
+
+        foreach ($decoded as $sectionKey => $sectionValue) {
+            if (! $this->isJsonObject($sectionValue)) {
+                $invalidSectionKeys[] = (string) $sectionKey;
+
+                continue;
+            }
+
+            $fields = [];
+            $this->collectScalarFields('', $sectionValue, $fields);
+
+            $sections[] = [
+                'key' => (string) $sectionKey,
+                'fields' => $fields,
+            ];
+        }
+
+        if ($invalidSectionKeys !== [] && $sections === []) {
+            return [
+                'sections' => [],
+                'error' => 'Each top-level key must be a JSON object with nested fields.',
+            ];
+        }
+
+        return [
+            'sections' => $sections,
+            'error' => null,
+        ];
+    }
+
+    private function isJsonObject(mixed $value): bool
+    {
+        return is_array($value) && ! array_is_list($value);
+    }
+
+    /**
+     * @param  list<array{path: string, value: string}>  $fields
+     */
+    private function collectScalarFields(string $prefix, mixed $value, array &$fields): void
+    {
+        if (is_array($value)) {
+            foreach ($value as $key => $child) {
+                $path = $prefix === '' ? (string) $key : "{$prefix}.{$key}";
+                $this->collectScalarFields($path, $child, $fields);
+            }
+
+            return;
+        }
+
+        if ((is_scalar($value) || $value === null) && $prefix !== '') {
+            $fields[] = [
+                'path' => $prefix,
+                'value' => $this->jsonFieldValueToString($value),
+            ];
+        }
+    }
+
+    private function jsonFieldValueToString(mixed $value): string
+    {
+        if ($value === null) {
+            return '';
+        }
+
+        if (is_bool($value)) {
+            return $value ? 'true' : 'false';
+        }
+
+        if (is_scalar($value)) {
+            return (string) $value;
+        }
+
+        return json_encode($value, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) ?: '';
     }
 
     private function injectPreviewBaseTag(string $html, string $baseHref): string

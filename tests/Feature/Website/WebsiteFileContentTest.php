@@ -104,7 +104,17 @@ class WebsiteFileContentTest extends TestCase
             'template_path' => 'sites/example-site',
         ]);
 
-        Storage::disk('local')->put('sites/example-site/content.json', '{"title":"Home"}');
+        Storage::disk('local')->put('sites/example-site/content.json', json_encode([
+            'site' => [
+                'title' => 'Elevate Mental Health and Wellness',
+                'brandName' => 'Elevate',
+                'logo' => 'assets/logo.png',
+            ],
+            'nav' => [
+                'ctaLabel' => 'Request Appointment',
+                'ctaHref' => '#appointment',
+            ],
+        ], JSON_THROW_ON_ERROR));
 
         $this->actingAs($manager)
             ->get(route('websites.files.json', ['website' => $website, 'path' => 'content.json']))
@@ -114,6 +124,67 @@ class WebsiteFileContentTest extends TestCase
                 ->where('website.name', 'Example Site')
                 ->where('file.name', 'content.json')
                 ->where('can_preview', false)
+                ->where('json_error', null)
+                ->has('sections', 2)
+                ->where('sections.0.key', 'site')
+                ->has('sections.0.fields', 3)
+                ->where('sections.0.fields.0.path', 'title')
+                ->where('sections.0.fields.0.value', 'Elevate Mental Health and Wellness')
+                ->where('sections.0.fields.1.path', 'brandName')
+                ->where('sections.0.fields.1.value', 'Elevate')
+                ->where('sections.1.key', 'nav')
+                ->where('sections.1.fields.0.path', 'ctaLabel')
+                ->where('sections.1.fields.0.value', 'Request Appointment')
+            );
+    }
+
+    public function test_json_editor_skips_scalar_top_level_sections_without_empty_paths(): void
+    {
+        $manager = $this->createWebsiteManager(['business_id' => null]);
+        $website = Website::factory()->create([
+            'template_path' => 'sites/example-site',
+        ]);
+
+        Storage::disk('local')->put('sites/example-site/content.json', json_encode([
+            'site' => [
+                'title' => 'Valid Title',
+            ],
+            'version' => '1.0.0',
+        ], JSON_THROW_ON_ERROR));
+
+        $this->actingAs($manager)
+            ->get(route('websites.files.json', ['website' => $website, 'path' => 'content.json']))
+            ->assertOk()
+            ->assertInertia(fn ($page) => $page
+                ->component('Websites/FileContent/JsonEditor')
+                ->has('sections', 1)
+                ->where('sections.0.key', 'site')
+                ->has('sections.0.fields', 1)
+                ->where('sections.0.fields.0.path', 'title')
+                ->where('sections.0.fields.0.value', 'Valid Title')
+                ->where('json_error', null)
+            );
+    }
+
+    public function test_json_editor_returns_error_when_all_top_level_sections_are_invalid(): void
+    {
+        $manager = $this->createWebsiteManager(['business_id' => null]);
+        $website = Website::factory()->create([
+            'template_path' => 'sites/example-site',
+        ]);
+
+        Storage::disk('local')->put('sites/example-site/content.json', json_encode([
+            'version' => '1.0.0',
+            'enabled' => true,
+        ], JSON_THROW_ON_ERROR));
+
+        $this->actingAs($manager)
+            ->get(route('websites.files.json', ['website' => $website, 'path' => 'content.json']))
+            ->assertOk()
+            ->assertInertia(fn ($page) => $page
+                ->component('Websites/FileContent/JsonEditor')
+                ->has('sections', 0)
+                ->where('json_error', 'Each top-level key must be a JSON object with nested fields.')
             );
     }
 

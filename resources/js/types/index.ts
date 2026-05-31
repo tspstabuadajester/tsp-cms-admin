@@ -91,6 +91,16 @@ export type WebsiteTemplateItem = {
     type: WebsiteTemplateItemType;
 };
 
+export type WebsiteJsonField = {
+    path: string;
+    value: string;
+};
+
+export type WebsiteJsonSection = {
+    key: string;
+    fields: WebsiteJsonField[];
+};
+
 export interface Business {
     id: number;
     uuid: string;
