@@ -14,8 +14,8 @@ const props = defineProps<{
 
 const section = defineModel<WebsiteJsonSection>('section', { required: true });
 
-const fieldId = (fieldPath: string): string =>
-    `${props.sectionKey}-${fieldPath}`.replace(/[^a-zA-Z0-9_-]/g, '-');
+const fieldId = (fieldIndex: number, fieldPath: string): string =>
+    `${props.sectionKey}-${fieldIndex}-${fieldPath}`.replace(/[^a-zA-Z0-9_-]/g, '-');
 
 const scalarFieldError = (fieldIndex: number): string | undefined =>
     fieldErrorMessage(props.errors, scalarFieldErrorKeys(props.sectionIndex, fieldIndex));
@@ -41,18 +41,19 @@ const updateFieldValue = (fieldIndex: number, value: string) => {
         <div v-if="section.fields.length > 0" class="grid gap-4 sm:grid-cols-1">
             <JsonFieldInput
                 v-for="(field, index) in section.fields"
-                :key="field.path"
-                :field="{ key: field.path, value: field.value }"
-                :input-id="fieldId(field.path)"
+                :key="`${sectionKey}-${index}-${field.path}`"
+                :field-key="field.path"
+                :model-value="section.fields[index].value"
+                :input-id="fieldId(index, field.path)"
                 :website-id="websiteId"
                 :error="scalarFieldError(index)"
-                @update:value="updateFieldValue(index, $event)"
+                @update:model-value="updateFieldValue(index, $event)"
             />
         </div>
 
         <JsonArrayGroup
             v-for="(arrayGroup, index) in section.arrays"
-            :key="arrayGroup.key"
+            :key="`${sectionKey}-${arrayGroup.key}`"
             v-model:array-group="section.arrays[index]"
             :section-key="sectionKey"
             :section-index="sectionIndex"

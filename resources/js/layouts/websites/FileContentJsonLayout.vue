@@ -24,7 +24,7 @@ const activeSection = defineModel<string>('activeSection', { required: true });
         <HeadingSmall :title="title" :description="description" />
 
         <div class="flex flex-col space-y-8 md:space-y-0 lg:flex-row lg:space-x-12 lg:space-y-0">
-            <aside class="w-full max-w-xl lg:w-48">
+            <aside class="relative z-10 w-full max-w-xl shrink-0 lg:w-48">
                 <nav class="flex flex-col space-y-1">
                     <Button
                         v-for="item in navItems"
@@ -41,7 +41,7 @@ const activeSection = defineModel<string>('activeSection', { required: true });
 
             <Separator class="my-6 md:hidden" />
 
-            <div class="min-w-0 flex-1 md:max-w-3xl">
+            <div class="relative z-0 min-w-0 flex-1 md:max-w-3xl">
                 <section class="space-y-6">
                     <slot />
                 </section>

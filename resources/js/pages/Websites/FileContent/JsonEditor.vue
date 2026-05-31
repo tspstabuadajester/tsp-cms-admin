@@ -65,6 +65,18 @@ const activeSectionIndex = computed(() =>
     editableSections.value.findIndex((section) => section.key === activeSectionKey.value),
 );
 
+const activeSection = computed({
+    get: (): WebsiteJsonSection | undefined =>
+        editableSections.value.find((section) => section.key === activeSectionKey.value),
+    set: (section: WebsiteJsonSection) => {
+        const index = editableSections.value.findIndex((item) => item.key === activeSectionKey.value);
+
+        if (index >= 0) {
+            editableSections.value[index] = section;
+        }
+    },
+});
+
 const sectionHasContent = (section: WebsiteJsonSection): boolean =>
     section.fields.length > 0 || section.arrays.some((arrayGroup) => arrayGroup.items.length > 0);
 
@@ -197,9 +209,10 @@ const breadcrumbs: BreadcrumbItem[] = [
                 :nav-items="navItems"
             >
                 <JsonSectionFields
-                    v-if="activeSectionIndex >= 0"
-                    v-model:section="editableSections[activeSectionIndex]"
-                    :section-key="editableSections[activeSectionIndex].key"
+                    v-if="activeSection"
+                    :key="activeSectionKey"
+                    v-model:section="activeSection"
+                    :section-key="activeSection.key"
                     :section-index="activeSectionIndex"
                     :website-id="website.id"
                     :errors="form.errors"

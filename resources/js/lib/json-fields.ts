@@ -20,7 +20,11 @@ const matchesFieldName = (path: string, fieldName: string): boolean => {
 
 const pathSegments = (path: string): string[] => path.split('.').filter((segment) => segment !== '');
 
-export function isImageUploadFieldPath(path: string): boolean {
+export function isImageUploadFieldPath(path: string | undefined | null): boolean {
+    if (!path) {
+        return false;
+    }
+
     const normalized = path.toLowerCase();
 
     for (const fieldName of IMAGE_FIELD_NAMES) {
@@ -34,6 +38,11 @@ export function isImageUploadFieldPath(path: string): boolean {
     }
 
     if (normalized === 'thumbnail.src' || normalized.endsWith('.thumbnail.src')) {
+        return true;
+    }
+
+    // Gallery-style array items: { "src": "...", "alt": "...", "caption": "..." }
+    if (normalized === 'src') {
         return true;
     }
 

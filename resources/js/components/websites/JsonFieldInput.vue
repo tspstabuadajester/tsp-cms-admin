@@ -1,33 +1,47 @@
 <script setup lang="ts">
 import InputError from '@/components/InputError.vue';
 import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
+import { cn } from '@/lib/utils';
 import { getXsrfToken, isImageUploadFieldPath } from '@/lib/json-fields';
-import { type WebsiteJsonField } from '@/types';
 import { LoaderCircle } from 'lucide-vue-next';
-import { ref } from 'vue';
+import { computed, ref, watch } from 'vue';
 
 const props = defineProps<{
-    field: WebsiteJsonField;
+    fieldKey: string;
+    modelValue: string;
     inputId: string;
     websiteId: number;
     error?: string;
 }>();
 
 const emit = defineEmits<{
-    'update:value': [value: string];
+    'update:modelValue': [value: string];
 }>();
 
 const uploading = ref(false);
 const uploadError = ref<string | null>(null);
 
-const assetPreviewUrl = (value: string): string => {
-    if (!value || value.startsWith('http://') || value.startsWith('https://')) {
-        return value;
+const isImageField = computed(() => isImageUploadFieldPath(props.fieldKey));
+
+watch(
+    () => props.inputId,
+    () => {
+        uploading.value = false;
+        uploadError.value = null;
+    },
+);
+
+const previewUrl = computed((): string => {
+    if (!props.modelValue) {
+        return '';
     }
 
-    return route('websites.preview.asset', { website: props.websiteId, path: value });
-};
+    if (props.modelValue.startsWith('http://') || props.modelValue.startsWith('https://')) {
+        return props.modelValue;
+    }
+
+    return route('websites.preview.asset', { website: props.websiteId, path: props.modelValue });
+});
 
 const uploadImage = async (event: Event) => {
     const input = event.target as HTMLInputElement;
@@ -74,7 +88,7 @@ const uploadImage = async (event: Event) => {
         }
 
         if (typeof payload.path === 'string') {
-            emit('update:value', payload.path);
+            emit('update:modelValue', payload.path);
         }
     } catch (error) {
         uploadError.value = error instanceof Error ? error.message : 'Image upload failed.';
@@ -86,26 +100,46 @@ const uploadImage = async (event: Event) => {
 
 <template>
     <div class="space-y-2">
-        <Label :for="inputId" class="text-sm text-muted-foreground">
-            {{ field.key }}
-        </Label>
+        <label
+            v-if="isImageField"
+            class="text-sm font-medium leading-none text-muted-foreground"
+        >
+            {{ fieldKey }}
+        </label>
+        <label
+            v-else
+            :for="inputId"
+            class="text-sm font-medium leading-none text-muted-foreground"
+        >
+            {{ fieldKey }}
+        </label>
 
-        <div v-if="isImageUploadFieldPath(field.key)" class="space-y-3 rounded-lg border p-4">
-            <div v-if="field.value" class="overflow-hidden rounded-md border bg-muted/40">
-                <img :src="assetPreviewUrl(field.value)" :alt="field.key" class="max-h-40 w-full object-contain" />
+        <div v-if="isImageField" class="space-y-3 rounded-lg border p-4">
+            <div v-if="modelValue" class="overflow-hidden rounded-md border bg-muted/40">
+                <img
+                    :src="previewUrl"
+                    :alt="fieldKey"
+                    loading="lazy"
+                    class="max-h-40 w-full object-contain"
+                />
             </div>
 
-            <p v-if="field.value" class="font-mono text-xs text-muted-foreground">
-                {{ field.value }}
+            <p v-if="modelValue" class="break-all font-mono text-xs text-muted-foreground">
+                {{ modelValue }}
             </p>
 
-            <div class="flex items-center gap-3">
-                <Input
+            <div class="flex max-w-md items-center gap-3">
+                <input
                     :id="inputId"
+                    :key="`${inputId}-file`"
                     type="file"
                     accept="image/*"
-                    class="cursor-pointer"
                     :disabled="uploading"
+                    :class="
+                        cn(
+                            'flex h-10 w-full cursor-pointer rounded-md border border-input bg-background px-3 py-2 text-base ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium file:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 md:text-sm',
+                        )
+                    "
                     @change="uploadImage"
                 />
                 <LoaderCircle v-if="uploading" class="size-4 shrink-0 animate-spin text-muted-foreground" />
@@ -117,10 +151,10 @@ const uploadImage = async (event: Event) => {
         <template v-else>
             <Input
                 :id="inputId"
-                :model-value="field.value"
+                :model-value="modelValue"
                 type="text"
                 :class="error ? 'border-destructive focus-visible:ring-destructive' : ''"
-                @update:model-value="emit('update:value', $event)"
+                @update:model-value="emit('update:modelValue', String($event))"
             />
             <InputError :message="error" />
         </template>

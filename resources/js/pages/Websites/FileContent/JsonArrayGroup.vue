@@ -17,8 +17,16 @@ const props = defineProps<{
 
 const arrayGroup = defineModel<WebsiteJsonArrayGroup>('arrayGroup', { required: true });
 
-const inputId = (itemIndex: number, fieldKey: string): string =>
-    `${props.sectionKey}-${arrayGroup.value.key}-${itemIndex}-${fieldKey}`.replace(/[^a-zA-Z0-9_-]/g, '-');
+const inputId = (itemIndex: number, fieldIndex: number, fieldKey: string): string =>
+    `${props.sectionKey}-${arrayGroup.value.key}-${itemIndex}-${fieldIndex}-${fieldKey}`.replace(/[^a-zA-Z0-9_-]/g, '-');
+
+let itemIdSequence = 0;
+
+const generateItemId = (): string => {
+    itemIdSequence += 1;
+
+    return `item-${Date.now().toString(36)}-${itemIdSequence.toString(36)}`;
+};
 
 const createItem = (): WebsiteJsonArrayItem => ({
     fields: arrayGroup.value.template.map((field) => ({ ...field })),
@@ -27,8 +35,6 @@ const createItem = (): WebsiteJsonArrayItem => ({
         value: field.key === 'id' ? generateItemId() : '',
     })),
 });
-
-const generateItemId = (): string => `item-${Date.now().toString(36)}`;
 
 const addItem = () => {
     arrayGroup.value.items.push(createItem());
@@ -74,12 +80,13 @@ const itemFieldError = (itemIndex: number, fieldIndex: number): string | undefin
             <CardContent class="grid gap-4 sm:grid-cols-2">
                 <JsonFieldInput
                     v-for="(field, fieldIndex) in item.fields"
-                    :key="field.key"
-                    :field="field"
-                    :input-id="inputId(itemIndex, field.key)"
+                    :key="`${itemIndex}-${fieldIndex}-${field.key}`"
+                    :field-key="field.key"
+                    :model-value="field.value"
+                    :input-id="inputId(itemIndex, fieldIndex, field.key)"
                     :website-id="websiteId"
                     :error="itemFieldError(itemIndex, fieldIndex)"
-                    @update:value="updateFieldValue(itemIndex, fieldIndex, $event)"
+                    @update:model-value="updateFieldValue(itemIndex, fieldIndex, $event)"
                 />
             </CardContent>
         </Card>
