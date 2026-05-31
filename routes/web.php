@@ -18,6 +18,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::get('/', [WebsiteController::class, 'index'])->name('websites');
         Route::get('/create', [WebsiteController::class, 'create'])->name('websites.create');
         Route::post('/', [WebsiteController::class, 'store'])->name('websites.store');
+        Route::get('/{website}', [WebsiteController::class, 'show'])->name('websites.show');
         Route::get('/{website}/edit', [WebsiteController::class, 'edit'])->name('websites.edit');
         Route::put('/{website}', [WebsiteController::class, 'update'])->name('websites.update');
     });

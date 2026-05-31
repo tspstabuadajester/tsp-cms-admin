@@ -77,6 +77,7 @@ class WebsiteTest extends TestCase
         $this->get(route('websites'))->assertRedirect(route('login'));
         $this->get(route('websites.create'))->assertRedirect(route('login'));
         $this->post(route('websites.store'), $this->validStorePayload())->assertRedirect(route('login'));
+        $this->get(route('websites.show', $website))->assertRedirect(route('login'));
         $this->get(route('websites.edit', $website))->assertRedirect(route('login'));
         $this->put(route('websites.update', $website), $this->validUpdatePayload($website))->assertRedirect(route('login'));
     }
@@ -91,6 +92,7 @@ class WebsiteTest extends TestCase
         $this->get(route('websites'))->assertForbidden();
         $this->get(route('websites.create'))->assertForbidden();
         $this->post(route('websites.store'), $this->validStorePayload())->assertForbidden();
+        $this->get(route('websites.show', $website))->assertForbidden();
         $this->get(route('websites.edit', $website))->assertForbidden();
         $this->put(route('websites.update', $website), $this->validUpdatePayload($website))->assertForbidden();
     }
@@ -242,6 +244,39 @@ class WebsiteTest extends TestCase
                 ->component('Websites/Edit')
                 ->where('website.name', 'Editable Site')
             );
+    }
+
+    public function test_authenticated_users_can_view_website_show_page(): void
+    {
+        $manager = $this->createSuperAdminWebsiteManager();
+        $business = Business::factory()->create(['name' => 'Acme Corp']);
+        $website = Website::factory()->create([
+            'name' => 'Showcase Site',
+            'business_id' => $business->id,
+            'primary_domain' => 'showcase.example.com',
+        ]);
+
+        $this->actingAs($manager)
+            ->get(route('websites.show', $website))
+            ->assertOk()
+            ->assertInertia(fn ($page) => $page
+                ->component('Websites/Show')
+                ->where('website.name', 'Showcase Site')
+                ->where('website.primary_domain', 'showcase.example.com')
+                ->where('website.business.name', 'Acme Corp')
+            );
+    }
+
+    public function test_business_scoped_user_cannot_view_website_outside_their_business(): void
+    {
+        $business = Business::factory()->create();
+        $otherBusiness = Business::factory()->create();
+        $scopedManager = $this->createScopedWebsiteManager($business);
+        $outsideWebsite = Website::factory()->create(['business_id' => $otherBusiness->id]);
+
+        $this->actingAs($scopedManager)
+            ->get(route('websites.show', $outsideWebsite))
+            ->assertNotFound();
     }
 
     public function test_business_scoped_user_cannot_edit_website_outside_their_business(): void

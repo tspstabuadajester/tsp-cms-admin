@@ -83,6 +83,36 @@ class WebsiteController extends Controller
     }
 
     /**
+     * Display the specified website.
+     */
+    public function show(Website $website): Response
+    {
+        $this->ensureWebsiteInScope($website);
+
+        $website->load('business:id,name');
+
+        return Inertia::render('Websites/Show', [
+            'website' => array_merge(
+                $website->only([
+                    'id',
+                    'uuid',
+                    'name',
+                    'slug',
+                    'primary_domain',
+                    'logo',
+                    'status',
+                    'published_at',
+                    'created_at',
+                    'updated_at',
+                ]),
+                [
+                    'business' => $website->business?->only(['id', 'name']),
+                ],
+            ),
+        ]);
+    }
+
+    /**
      * Show the form for editing the specified website.
      */
     public function edit(Website $website): Response
