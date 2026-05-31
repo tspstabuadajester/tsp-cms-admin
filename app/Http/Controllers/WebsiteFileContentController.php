@@ -3,9 +3,12 @@
 namespace App\Http\Controllers;
 
 use App\Http\Requests\Website\UpdateWebsiteJsonRequest;
+use App\Http\Requests\Website\UploadWebsiteJsonAssetRequest;
 use App\Models\Website;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Response as HttpResponse;
+use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use Inertia\Inertia;
@@ -92,6 +95,38 @@ class WebsiteFileContentController extends Controller
         return redirect()
             ->route('websites.files.json', ['website' => $website, 'path' => $path])
             ->with('status', 'JSON file saved successfully.');
+    }
+
+    /**
+     * Upload an image into the website template assets folder.
+     */
+    public function uploadAsset(UploadWebsiteJsonAssetRequest $request, Website $website): JsonResponse
+    {
+        $this->ensureWebsiteInScope($website);
+
+        abort_unless($website->template_path, 404);
+
+        $assetsDirectory = "{$website->template_path}/assets";
+
+        if (! Storage::disk('local')->directoryExists($assetsDirectory)) {
+            Storage::disk('local')->makeDirectory($assetsDirectory);
+        }
+
+        $uploadedFile = $request->file('file');
+        $basename = Str::slug(pathinfo($uploadedFile->getClientOriginalName(), PATHINFO_FILENAME));
+
+        if ($basename === '') {
+            $basename = 'image';
+        }
+
+        $extension = $this->resolveUploadedImageExtension($uploadedFile);
+        $filename = "{$basename}-".Str::lower(Str::random(8)).".{$extension}";
+
+        $uploadedFile->storeAs($assetsDirectory, $filename, 'local');
+
+        return response()->json([
+            'path' => "assets/{$filename}",
+        ]);
     }
 
     /**
@@ -278,6 +313,34 @@ class WebsiteFileContentController extends Controller
                 'value' => $this->jsonFieldValueToString($value),
             ];
         }
+    }
+
+    private function resolveUploadedImageExtension(UploadedFile $file): string
+    {
+        $extension = strtolower($file->getClientOriginalExtension());
+
+        if ($extension === '') {
+            $extension = strtolower($file->extension() ?? '');
+        }
+
+        $extension = match ($extension) {
+            'jpeg' => 'jpg',
+            '' => match ($file->getMimeType()) {
+                'image/jpeg', 'image/jpg' => 'jpg',
+                'image/png' => 'png',
+                'image/gif' => 'gif',
+                'image/webp' => 'webp',
+                'image/svg+xml' => 'svg',
+                'image/avif' => 'avif',
+                'image/bmp', 'image/x-ms-bmp' => 'bmp',
+                default => 'jpg',
+            },
+            default => $extension,
+        };
+
+        $allowed = ['jpg', 'png', 'gif', 'webp', 'svg', 'avif', 'bmp'];
+
+        return in_array($extension, $allowed, true) ? $extension : 'jpg';
     }
 
     private function jsonFieldValueToString(mixed $value): string

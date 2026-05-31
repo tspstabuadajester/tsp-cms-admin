@@ -6,6 +6,7 @@ use App\Models\Business;
 use App\Models\User;
 use App\Models\Website;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Storage;
 use Spatie\Permission\Models\Permission;
 use Tests\TestCase;
@@ -136,6 +137,61 @@ class WebsiteFileContentTest extends TestCase
                 ->where('sections.1.fields.0.path', 'ctaLabel')
                 ->where('sections.1.fields.0.value', 'Request Appointment')
             );
+    }
+
+    public function test_authenticated_users_can_upload_json_editor_images(): void
+    {
+        $manager = $this->createWebsiteManager(['business_id' => null]);
+        $website = Website::factory()->create([
+            'template_path' => 'sites/example-site',
+        ]);
+
+        $response = $this->actingAs($manager)->post(route('websites.files.assets.upload', $website), [
+            'file' => UploadedFile::fake()->image('hero-banner.png', 200, 100),
+        ]);
+
+        $response
+            ->assertOk()
+            ->assertJsonStructure(['path']);
+
+        $storedPath = $response->json('path');
+
+        $this->assertIsString($storedPath);
+        $this->assertStringStartsWith('assets/', $storedPath);
+        Storage::disk('local')->assertExists("sites/example-site/{$storedPath}");
+    }
+
+    public function test_json_editor_image_upload_assigns_extension_when_filename_has_none(): void
+    {
+        $manager = $this->createWebsiteManager(['business_id' => null]);
+        $website = Website::factory()->create([
+            'template_path' => 'sites/example-site',
+        ]);
+
+        $response = $this->actingAs($manager)->post(route('websites.files.assets.upload', $website), [
+            'file' => UploadedFile::fake()->create('hero-banner', 100, 'image/jpeg'),
+        ]);
+
+        $storedPath = $response->json('path');
+
+        $response->assertOk();
+        $this->assertIsString($storedPath);
+        $this->assertMatchesRegularExpression('/^assets\/hero-banner-[a-z0-9]{8}\.jpg$/', $storedPath);
+        Storage::disk('local')->assertExists("sites/example-site/{$storedPath}");
+    }
+
+    public function test_json_editor_image_upload_rejects_non_images(): void
+    {
+        $manager = $this->createWebsiteManager(['business_id' => null]);
+        $website = Website::factory()->create([
+            'template_path' => 'sites/example-site',
+        ]);
+
+        $this->actingAs($manager)
+            ->post(route('websites.files.assets.upload', $website), [
+                'file' => UploadedFile::fake()->create('notes.txt', 100, 'text/plain'),
+            ])
+            ->assertSessionHasErrors('file');
     }
 
     public function test_authenticated_users_can_save_json_file_changes(): void

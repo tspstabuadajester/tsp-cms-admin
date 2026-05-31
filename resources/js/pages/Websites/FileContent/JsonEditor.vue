@@ -158,6 +158,7 @@ const breadcrumbs: BreadcrumbItem[] = [
                     v-if="activeSectionIndex >= 0"
                     v-model:fields="editableSections[activeSectionIndex].fields"
                     :section-key="editableSections[activeSectionIndex].key"
+                    :website-id="website.id"
                 />
             </FileContentJsonLayout>
         </div>

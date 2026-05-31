@@ -30,6 +30,8 @@ Route::middleware(['auth', 'verified'])->group(function () {
             Route::put('json/{path}', [WebsiteFileContentController::class, 'updateJson'])
                 ->where('path', '.*')
                 ->name('websites.files.json.update');
+            Route::post('assets/upload', [WebsiteFileContentController::class, 'uploadAsset'])
+                ->name('websites.files.assets.upload');
             Route::get('/', [WebsiteFileContentController::class, 'index'])->name('websites.files');
         });
 
