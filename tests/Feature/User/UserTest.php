@@ -111,11 +111,11 @@ class UserTest extends TestCase
     {
         $user = User::factory()->create();
 
-        $this->get(route('user'))->assertRedirect(route('login'));
-        $this->get(route('user.create'))->assertRedirect(route('login'));
-        $this->post(route('user.store'), $this->validStorePayload())->assertRedirect(route('login'));
-        $this->get(route('user.edit', $user))->assertRedirect(route('login'));
-        $this->put(route('user.update', $user), $this->validUpdatePayload($user))->assertRedirect(route('login'));
+        $this->get(route('users'))->assertRedirect(route('login'));
+        $this->get(route('users.create'))->assertRedirect(route('login'));
+        $this->post(route('users.store'), $this->validStorePayload())->assertRedirect(route('login'));
+        $this->get(route('users.edit', $user))->assertRedirect(route('login'));
+        $this->put(route('users.update', $user), $this->validUpdatePayload($user))->assertRedirect(route('login'));
     }
 
     public function test_users_without_settings_manage_permission_cannot_access_user_routes(): void
@@ -125,18 +125,18 @@ class UserTest extends TestCase
 
         $this->actingAs($user);
 
-        $this->get(route('user'))->assertForbidden();
-        $this->get(route('user.create'))->assertForbidden();
-        $this->post(route('user.store'), $this->validStorePayload())->assertForbidden();
-        $this->get(route('user.edit', $targetUser))->assertForbidden();
-        $this->put(route('user.update', $targetUser), $this->validUpdatePayload($targetUser))->assertForbidden();
+        $this->get(route('users'))->assertForbidden();
+        $this->get(route('users.create'))->assertForbidden();
+        $this->post(route('users.store'), $this->validStorePayload())->assertForbidden();
+        $this->get(route('users.edit', $targetUser))->assertForbidden();
+        $this->put(route('users.update', $targetUser), $this->validUpdatePayload($targetUser))->assertForbidden();
     }
 
     public function test_authenticated_users_can_view_user_index(): void
     {
         $admin = $this->createSettingsManager();
 
-        $response = $this->actingAs($admin)->get(route('user'));
+        $response = $this->actingAs($admin)->get(route('users'));
 
         $response->assertOk();
     }
@@ -151,7 +151,7 @@ class UserTest extends TestCase
         $admin = $this->createSettingsManager();
 
         $this->actingAs($admin)
-            ->get(route('user'))
+            ->get(route('users'))
             ->assertOk()
             ->assertViewHas('page', function (array $page) use ($unscopedUser): bool {
                 $userIds = collect($page['props']['users']['data'])->pluck('id')->all();
@@ -175,7 +175,7 @@ class UserTest extends TestCase
         $scopedManager = $this->createScopedSettingsManager($business);
 
         $this->actingAs($scopedManager)
-            ->get(route('user'))
+            ->get(route('users'))
             ->assertOk()
             ->assertViewHas('page', function (array $page) use ($inBusiness, $outsideUser, $unscopedUser, $scopedManager): bool {
                 $userIds = collect($page['props']['users']['data'])->pluck('id')->all();
@@ -199,11 +199,11 @@ class UserTest extends TestCase
         $this->assignRole($outsideUser);
 
         $this->actingAs($scopedManager)
-            ->get(route('user.edit', $outsideUser))
+            ->get(route('users.edit', $outsideUser))
             ->assertNotFound();
 
         $this->actingAs($scopedManager)
-            ->put(route('user.update', $outsideUser), $this->validUpdatePayload($outsideUser, [
+            ->put(route('users.update', $outsideUser), $this->validUpdatePayload($outsideUser, [
                 'name' => 'Hacked Name',
             ]))
             ->assertNotFound();
@@ -217,13 +217,13 @@ class UserTest extends TestCase
         $scopedManager = $this->createScopedSettingsManager($business);
 
         $this->actingAs($scopedManager)
-            ->post(route('user.store'), $this->validStorePayload([
+            ->post(route('users.store'), $this->validStorePayload([
                 'name' => 'Scoped User',
                 'email' => 'scoped-user@example.com',
                 'business_id' => Business::factory()->create()->id,
             ]))
             ->assertSessionHasNoErrors()
-            ->assertRedirect(route('user'));
+            ->assertRedirect(route('users'));
 
         $createdUser = User::query()->where('email', 'scoped-user@example.com')->first();
 
@@ -236,7 +236,7 @@ class UserTest extends TestCase
     {
         $admin = $this->createSettingsManager();
 
-        $response = $this->actingAs($admin)->get(route('user.create'));
+        $response = $this->actingAs($admin)->get(route('users.create'));
 
         $response->assertOk();
     }
@@ -247,14 +247,14 @@ class UserTest extends TestCase
 
         $admin = $this->createSettingsManager();
 
-        $response = $this->actingAs($admin)->post(route('user.store'), $this->validStorePayload([
+        $response = $this->actingAs($admin)->post(route('users.store'), $this->validStorePayload([
             'name' => 'New User',
             'email' => 'new-user@example.com',
         ]));
 
         $response
             ->assertSessionHasNoErrors()
-            ->assertRedirect(route('user'))
+            ->assertRedirect(route('users'))
             ->assertSessionHas('toast', [
                 'message' => 'User created successfully.',
                 'variant' => 'success',
@@ -275,20 +275,20 @@ class UserTest extends TestCase
         User::factory()->create(['email' => 'existing@example.com']);
 
         $this->actingAs($admin)
-            ->from(route('user.create'))
-            ->post(route('user.store'), [])
+            ->from(route('users.create'))
+            ->post(route('users.store'), [])
             ->assertSessionHasErrors(['name', 'email', 'password', 'role']);
 
         $this->actingAs($admin)
-            ->from(route('user.create'))
-            ->post(route('user.store'), $this->validStorePayload([
+            ->from(route('users.create'))
+            ->post(route('users.store'), $this->validStorePayload([
                 'email' => 'existing@example.com',
             ]))
             ->assertSessionHasErrors(['email']);
 
         $this->actingAs($admin)
-            ->from(route('user.create'))
-            ->post(route('user.store'), $this->validStorePayload([
+            ->from(route('users.create'))
+            ->post(route('users.store'), $this->validStorePayload([
                 'role' => 'super-admin',
             ]))
             ->assertSessionHasErrors(['role']);
@@ -300,7 +300,7 @@ class UserTest extends TestCase
         $user = User::factory()->create();
         $this->assignRole($user);
 
-        $response = $this->actingAs($admin)->get(route('user.edit', $user));
+        $response = $this->actingAs($admin)->get(route('users.edit', $user));
 
         $response->assertOk();
     }
@@ -317,7 +317,7 @@ class UserTest extends TestCase
         ]);
         $this->assignRole($user);
 
-        $response = $this->actingAs($admin)->put(route('user.update', $user), $this->validUpdatePayload($user, [
+        $response = $this->actingAs($admin)->put(route('users.update', $user), $this->validUpdatePayload($user, [
             'name' => 'Updated Name',
             'email' => 'updated@example.com',
             'status' => 'inactive',
@@ -326,7 +326,7 @@ class UserTest extends TestCase
 
         $response
             ->assertSessionHasNoErrors()
-            ->assertRedirect(route('user'))
+            ->assertRedirect(route('users'))
             ->assertSessionHas('toast', [
                 'message' => 'User updated successfully.',
                 'variant' => 'success',
@@ -353,11 +353,11 @@ class UserTest extends TestCase
         $verifiedAt = $user->email_verified_at;
 
         $this->actingAs($admin)
-            ->put(route('user.update', $user), $this->validUpdatePayload($user, [
+            ->put(route('users.update', $user), $this->validUpdatePayload($user, [
                 'name' => 'Renamed User',
             ]))
             ->assertSessionHasNoErrors()
-            ->assertRedirect(route('user'));
+            ->assertRedirect(route('users'));
 
         $user->refresh();
 
@@ -372,12 +372,12 @@ class UserTest extends TestCase
         $this->assignRole($user);
 
         $this->actingAs($admin)
-            ->put(route('user.update', $user), $this->validUpdatePayload($user, [
+            ->put(route('users.update', $user), $this->validUpdatePayload($user, [
                 'password' => $this->validPassword(),
                 'password_confirmation' => $this->validPassword(),
             ]))
             ->assertSessionHasNoErrors()
-            ->assertRedirect(route('user'));
+            ->assertRedirect(route('users'));
 
         $this->assertTrue(Hash::check($this->validPassword(), $user->refresh()->password));
     }
@@ -396,11 +396,11 @@ class UserTest extends TestCase
         Storage::disk('public')->put('avatars/existing-avatar.svg', '<svg>original</svg>');
 
         $this->actingAs($admin)
-            ->put(route('user.update', $user), $this->validUpdatePayload($user, [
+            ->put(route('users.update', $user), $this->validUpdatePayload($user, [
                 'name' => 'Updated Name',
             ]))
             ->assertSessionHasNoErrors()
-            ->assertRedirect(route('user'));
+            ->assertRedirect(route('users'));
 
         $user->refresh();
 
@@ -417,27 +417,27 @@ class UserTest extends TestCase
         User::factory()->create(['email' => 'taken@example.com']);
 
         $this->actingAs($admin)
-            ->from(route('user.edit', $user))
-            ->put(route('user.update', $user), [])
+            ->from(route('users.edit', $user))
+            ->put(route('users.update', $user), [])
             ->assertSessionHasErrors(['name', 'email', 'status', 'role']);
 
         $this->actingAs($admin)
-            ->from(route('user.edit', $user))
-            ->put(route('user.update', $user), $this->validUpdatePayload($user, [
+            ->from(route('users.edit', $user))
+            ->put(route('users.update', $user), $this->validUpdatePayload($user, [
                 'email' => 'taken@example.com',
             ]))
             ->assertSessionHasErrors(['email']);
 
         $this->actingAs($admin)
-            ->from(route('user.edit', $user))
-            ->put(route('user.update', $user), $this->validUpdatePayload($user, [
+            ->from(route('users.edit', $user))
+            ->put(route('users.update', $user), $this->validUpdatePayload($user, [
                 'status' => 'invalid-status',
             ]))
             ->assertSessionHasErrors(['status']);
 
         $this->actingAs($admin)
-            ->from(route('user.edit', $user))
-            ->put(route('user.update', $user), $this->validUpdatePayload($user, [
+            ->from(route('users.edit', $user))
+            ->put(route('users.update', $user), $this->validUpdatePayload($user, [
                 'role' => 'super-admin',
             ]))
             ->assertSessionHasErrors(['role']);

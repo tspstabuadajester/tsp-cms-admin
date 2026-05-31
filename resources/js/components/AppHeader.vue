@@ -50,8 +50,8 @@ const mainNavItems: NavItem[] = [
         icon: Globe,
     },
     {
-        title: 'User',
-        href: '/user',
+        title: 'Users',
+        href: '/users',
         icon: User,
     },
 ];

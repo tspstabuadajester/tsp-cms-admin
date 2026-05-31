@@ -31,8 +31,8 @@ const sidebarNavItems: SettingsNavItem[] = [
         href: '/settings/password',
     },
     {
-        title: 'User',
-        href: '/user',
+        title: 'Users',
+        href: '/users',
         permission: 'settings.manage',
     },
     {
@@ -43,7 +43,6 @@ const sidebarNavItems: SettingsNavItem[] = [
     {
         title: 'Appearance',
         href: '/settings/appearance',
-        permission: 'settings.manage',
     },
 ];
 

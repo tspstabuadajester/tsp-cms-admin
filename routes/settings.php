@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\Settings\PasswordController;
 use App\Http\Controllers\Settings\ProfileController;
+use App\Http\Controllers\UserController;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
 
@@ -16,5 +17,13 @@ Route::middleware('auth')->group(function () {
 
     Route::get('settings/appearance', function () {
         return Inertia::render('settings/Appearance');
-    })->middleware('permission:settings.manage')->name('appearance');
+    })->name('appearance');
+
+    Route::prefix('users')->middleware('permission:settings.manage')->group(function () {
+        Route::get('/', [UserController::class, 'index'])->name('users');
+        Route::get('/create', [UserController::class, 'create'])->name('users.create');
+        Route::post('/', [UserController::class, 'store'])->name('users.store');
+        Route::get('/{user}/edit', [UserController::class, 'edit'])->name('users.edit');
+        Route::put('/{user}', [UserController::class, 'update'])->name('users.update');
+    });
 });

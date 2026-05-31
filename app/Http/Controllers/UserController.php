@@ -61,7 +61,7 @@ class UserController extends Controller
 
         $user->assignRole($validated['role']);
 
-        return to_route('user')->with('toast', [
+        return to_route('users')->with('toast', [
             'message' => 'User created successfully.',
             'variant' => 'success',
         ]);
@@ -123,7 +123,7 @@ class UserController extends Controller
             $user->syncRoles([$validated['role']]);
         }
 
-        return to_route('user')->with('toast', [
+        return to_route('users')->with('toast', [
             'message' => 'User updated successfully.',
             'variant' => 'success',
         ]);

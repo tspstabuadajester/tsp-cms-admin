@@ -28,11 +28,11 @@ const selectClass =
 const breadcrumbs: BreadcrumbItem[] = [
     {
         title: 'Users',
-        href: '/user',
+        href: '/users',
     },
     {
         title: 'Create',
-        href: '/user/create',
+        href: '/users/create',
     },
 ];
 
@@ -46,7 +46,7 @@ const form = useForm({
 });
 
 const submit = () => {
-    form.post(route('user.store'), {
+    form.post(route('users.store'), {
         onFinish: () => form.reset('password', 'password_confirmation'),
     });
 };
@@ -144,7 +144,7 @@ const submit = () => {
                 <div class="flex items-center gap-4">
                     <Button type="submit" :disabled="form.processing">Create User</Button>
                     <Button variant="outline" as-child>
-                        <Link :href="route('user')">Cancel</Link>
+                        <Link :href="route('users')">Cancel</Link>
                     </Button>
                 </div>
             </form>

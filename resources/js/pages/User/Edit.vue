@@ -33,11 +33,11 @@ const selectClass =
 const breadcrumbs: BreadcrumbItem[] = [
     {
         title: 'Users',
-        href: '/user',
+        href: '/users',
     },
     {
         title: 'Edit',
-        href: `/user/${props.user.id}/edit`,
+        href: `/users/${props.user.id}/edit`,
     },
 ];
 
@@ -55,7 +55,7 @@ const form = useForm({
 });
 
 const submit = () => {
-    form.put(route('user.update', props.user.id), {
+    form.put(route('users.update', props.user.id), {
         onFinish: () => form.reset('password', 'password_confirmation'),
     });
 };
@@ -191,7 +191,7 @@ const submit = () => {
                         Update User
                     </Button>
                     <Button variant="outline" as-child>
-                        <Link :href="route('user')">Cancel</Link>
+                        <Link :href="route('users')">Cancel</Link>
                     </Button>
                 </div>
             </form>

@@ -25,7 +25,7 @@ const { can } = usePermissions();
 const breadcrumbs: BreadcrumbItem[] = [
     {
         title: 'Users',
-        href: '/user',
+        href: '/users',
     },
 ];
 
@@ -47,7 +47,7 @@ const formatDate = (date: string) => {
                 <div class="flex items-center justify-between gap-4">
                     <HeadingSmall title="Users" description="Manage all users in the system" />
                     <Button v-if="can('settings.manage')" as-child>
-                        <Link :href="route('user.create')">
+                        <Link :href="route('users.create')">
                             <Plus class="size-4" />
                             Create User
                         </Link>
@@ -97,7 +97,7 @@ const formatDate = (date: string) => {
                                 <td class="p-4 align-middle text-muted-foreground">{{ formatDate(user.created_at) }}</td>
                             <td class="p-4 align-middle text-right">
                                 <Button v-if="can('settings.manage')" variant="outline" size="sm" as-child>
-                                    <Link :href="route('user.edit', user.id)">
+                                    <Link :href="route('users.edit', user.id)">
                                         <Pencil class="size-4" />
                                         Edit
                                     </Link>
