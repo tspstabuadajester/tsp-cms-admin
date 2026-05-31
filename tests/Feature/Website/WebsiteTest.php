@@ -6,12 +6,20 @@ use App\Models\Business;
 use App\Models\User;
 use App\Models\Website;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Storage;
 use Spatie\Permission\Models\Permission;
 use Tests\TestCase;
 
 class WebsiteTest extends TestCase
 {
     use RefreshDatabase;
+
+    protected function setUp(): void
+    {
+        parent::setUp();
+
+        Storage::fake('local');
+    }
 
     private function createWebsiteManager(array $attributes = []): User
     {
@@ -153,6 +161,8 @@ class WebsiteTest extends TestCase
         $this->assertNotNull($website);
         $this->assertSame($business->id, $website->business_id);
         $this->assertSame('super.example.com', $website->primary_domain);
+        $this->assertSame('sites/super-admin-site', $website->template_path);
+        $this->assertTrue(Storage::disk('local')->directoryExists($website->template_path));
     }
 
     public function test_super_admin_requires_business_id_when_creating_a_website(): void

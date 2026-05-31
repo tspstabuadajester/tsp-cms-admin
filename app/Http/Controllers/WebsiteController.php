@@ -52,9 +52,11 @@ class WebsiteController extends Controller
     {
         $validated = $request->validated();
         $logoFilename = null;
+        $sitePath = $this->siteDirectoryPath($validated['slug']);
+        $createdSiteDirectory = false;
 
         try {
-            DB::transaction(function () use ($request, $validated, &$logoFilename): void {
+            DB::transaction(function () use ($request, $validated, $sitePath, &$logoFilename, &$createdSiteDirectory): void {
                 $website = Website::create([
                     'uuid' => (string) Str::uuid(),
                     'name' => $validated['name'],
@@ -62,7 +64,10 @@ class WebsiteController extends Controller
                     'primary_domain' => $validated['primary_domain'] ?? null,
                     'business_id' => $this->resolveBusinessId($validated['business_id'] ?? null),
                     'status' => $validated['status'],
+                    'template_path' => $sitePath,
                 ]);
+
+                $createdSiteDirectory = $this->ensureSiteDirectory($sitePath);
 
                 $logoFilename = $this->storeLogo($request->file('logo'));
 
@@ -72,6 +77,10 @@ class WebsiteController extends Controller
             });
         } catch (Throwable $exception) {
             $this->deleteStoredLogo($logoFilename);
+
+            if ($createdSiteDirectory) {
+                $this->deleteSiteDirectory($sitePath);
+            }
 
             throw $exception;
         }
@@ -195,6 +204,33 @@ class WebsiteController extends Controller
             $this->authBusinessId() === null || $website->business_id === $this->authBusinessId(),
             403,
         );
+    }
+
+    private function siteDirectoryPath(string $slug): string
+    {
+        return "sites/{$slug}";
+    }
+
+    private function ensureSiteDirectory(string $path): bool
+    {
+        if (Storage::disk('local')->directoryExists($path)) {
+            return false;
+        }
+
+        if (! Storage::disk('local')->makeDirectory($path)) {
+            throw ValidationException::withMessages([
+                'slug' => 'The website template directory could not be created. Please try again.',
+            ]);
+        }
+
+        return true;
+    }
+
+    private function deleteSiteDirectory(string $path): void
+    {
+        if (Storage::disk('local')->directoryExists($path)) {
+            Storage::disk('local')->deleteDirectory($path);
+        }
     }
 
     private function storeLogo(?UploadedFile $logo): ?string

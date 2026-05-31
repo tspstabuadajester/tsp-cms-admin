@@ -23,6 +23,7 @@ class Website extends Model
         'logo',
         'settings',
         'published_at',
+        'template_path',
     ];
 
     protected $casts = [
